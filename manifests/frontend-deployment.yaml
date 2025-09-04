@@ -15,20 +15,19 @@ spec:
     spec:
       containers:
         - name: frontend
-          # ✅ Jenkins가 빌드마다 태그를 최신 BUILD_NUMBER로 치환합니다.
           image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:0
           imagePullPolicy: Always
           ports:
             - containerPort: 80
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz     # ✅ 여기
               port: 80
-            initialDelaySeconds: 5
+            initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz     # ✅ 여기
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 20

@@ -86,16 +86,34 @@ pipeline {
     stage('Update manifests (image tag -> BUILD_NUMBER)') {
       when { expression { env.SKIP_BUILD != "true" } }
       steps {
-        sh """
-          # frontend Deployment 이미지 태그 치환
-          sed -ri "s#(image:\\s*${ECR_REPO}:).*#\\1${IMG_TAG}#g" manifests/frontend-deployment.yaml
+        withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+          sh """
+            set -e
 
-          git config user.name  "jenkins-bot"
-          git config user.email "jenkins-bot@local"
-          git add manifests/frontend-deployment.yaml
-          git commit -m "chore(frontend): update image tag to ${IMG_TAG} [ci skip? false]"
-          git push origin ${GIT_BRANCH}
-        """
+            # workspace trust (잠재적 안전성 경고 방지)
+            git config --global --add safe.directory "${WORKSPACE}" || true
+
+            # 이미지 태그 치환
+            sed -ri "s#(image:\\s*${ECR_REPO}:).*#\\1${IMG_TAG}#g" manifests/frontend-deployment.yaml
+
+            git config user.name  "jenkins-bot"
+            git config user.email "jenkins-bot@local"
+            git add manifests/frontend-deployment.yaml || true
+
+            # 변경이 있을 때만 커밋
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(frontend): update image tag to ${IMG_TAG} [ci skip? false]"
+            else
+              echo "No manifest changes to commit."
+            fi
+
+            # 원격 갱신 후 푸시 (토큰 포함 URL 사용)
+            git pull --rebase https://${GIT_USER}:${GIT_TOKEN}@github.com/fk36dks/Final-PJ.git ${GIT_BRANCH} || true
+
+            # 커밋이 없어도 push는 무해(업데이트 없으면 no-op)
+            git push https://${GIT_USER}:${GIT_TOKEN}@github.com/fk36dks/Final-PJ.git ${GIT_BRANCH}
+          """
+        }
       }
     }
   }

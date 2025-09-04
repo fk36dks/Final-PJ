@@ -10,7 +10,6 @@ COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 # 정적 파일 복사 (mypage.html을 메인으로, 새로 추가하는 페이지/이미지도 함께 복사)
 # 필요에 맞게 경로 확장 가능
 COPY ./*.html /usr/share/nginx/html/
-COPY assets/ /usr/share/nginx/html/assets/
 
 EXPOSE 80
 

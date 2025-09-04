@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: shop-frontend
-  namespace: finalproject-dev
+  namespace: shop
 spec:
   replicas: 1
   selector:
@@ -15,8 +15,21 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:37
+          # ✅ Jenkins가 빌드마다 태그를 최신 BUILD_NUMBER로 치환합니다.
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:0
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
 

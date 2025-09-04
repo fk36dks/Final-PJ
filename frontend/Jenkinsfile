@@ -3,23 +3,26 @@ pipeline {
   environment {
     AWS_REGION         = 'ap-northeast-2'
     ACCOUNT_ID         = '335507813633'
-    ECR_REPO           = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/shop-frontend"
-    IMG_TAG            = "${env.BUILD_NUMBER}"
-    AWS_CREDENTIALS_ID = 'AWS-DY'
+    ECR_REGISTRY       = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    ECR_REPO           = "${ECR_REGISTRY}/shop-frontend"
+    IMG_TAG            = "${env.BUILD_NUMBER}"          // GitOps 방법 A: 태그=빌드번호
+    AWS_CREDENTIALS_ID = 'AWS-DY'                       // ✅ Jenkins 글로벌 크리덴셜 ID
+    GIT_CREDENTIALS_ID = 'github-https'
+    GIT_BRANCH         = 'main'
+  }
 
-    // ✅ Docker Hub 백업 푸시용
-    DOCKERHUB_REPO           = 'fk36dks/shop-frontend'   // <username>/<repo>
-    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-https'         // Jenkins에 만든 크리덴셜 ID
+  options {
+    disableConcurrentBuilds()
+    timestamps()
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/fk36dks/Final-PJ.git'
+        git branch: "${env.GIT_BRANCH}", credentialsId: "${env.GIT_CREDENTIALS_ID}", url: 'https://github.com/fk36dks/Final-PJ.git'
       }
     }
 
-    // ★ 가드: jenkins-bot 커밋/ manifests-전용 변경이면 이후 단계 스킵
     stage('Guard: skip self-commit/manifests-only') {
       steps {
         script {
@@ -27,114 +30,79 @@ pipeline {
           def author  = sh(script: "git log -1 --pretty=%an", returnStdout: true).trim()
           if (author == 'jenkins-bot') { env.SKIP_BUILD = "true" }
 
+          // 최근 커밋 변경 파일 목록(첫 빌드 예외 처리)
           def diffCmd = '''
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              git diff --name-only HEAD^ HEAD
+            set -e
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              git diff --name-only HEAD~1..HEAD
             else
-              echo ""
+              echo "__FIRST_BUILD__"
             fi
           '''
-          def changed = sh(script: diffCmd, returnStdout: true).trim()
-          if (changed && changed.split("\\n").every{ it.startsWith('manifests/') }) {
-            env.SKIP_BUILD = "true"
-          }
-          echo "Guard check -> author=${author}, skip=${env.SKIP_BUILD}"
-        }
-      }
-    }
-
-    stage('Build Frontend Image') {
-      when { expression { env.SKIP_BUILD != 'true' } }
-      steps {
-        dir('frontend') {
-          sh '''
-            set -euxo pipefail
-            docker build -t ${ECR_REPO}:${IMG_TAG} .
-            docker tag ${ECR_REPO}:${IMG_TAG} ${ECR_REPO}:latest
-          '''
-        }
-      }
-    }
-
-    stage('Push to ECR & Docker Hub') {
-      when { expression { env.SKIP_BUILD != 'true' } }
-      steps {
-        // === ECR 로그인 & 푸시 ===
-        withAWS(credentials: "${AWS_CREDENTIALS_ID}", region: "${AWS_REGION}") {
-          sh '''
-            set -euxo pipefail
-            # 레포 없으면 생성
-            aws ecr describe-repositories --repository-names "${ECR_REPO##*/}" >/dev/null 2>&1 || \
-              aws ecr create-repository --repository-name "${ECR_REPO##*/}"
-
-            aws ecr get-login-password --region ${AWS_REGION} \
-              | docker login --username AWS --password-stdin ${ECR_REPO%/*}
-
-            docker push ${ECR_REPO}:${IMG_TAG}
-            docker push ${ECR_REPO}:latest
-          '''
-        }
-
-        // === Docker Hub 로그인 & 푸시 ===
-        withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PAT')]) {
-          sh '''
-            set -euxo pipefail
-            echo "$DH_PAT" | docker login -u "$DH_USER" --password-stdin docker.io
-
-            docker tag ${ECR_REPO}:${IMG_TAG} docker.io/${DOCKERHUB_REPO}:${IMG_TAG}
-            docker tag ${ECR_REPO}:${IMG_TAG} docker.io/${DOCKERHUB_REPO}:latest
-
-            docker push docker.io/${DOCKERHUB_REPO}:${IMG_TAG}
-            docker push docker.io/${DOCKERHUB_REPO}:latest
-
-            docker logout docker.io || true
-          '''
-        }
-      }
-    }
-
-    stage('Update Manifests (GitOps)') {
-      when { expression { env.SKIP_BUILD != 'true' } }
-      steps {
-        lock(resource: 'manifests-main-push') {
-          dir('manifests') {
-            withCredentials([usernamePassword(credentialsId: 'github-https', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-              sh '''
-                set -euxo pipefail
-                git remote set-url origin https://github.com/fk36dks/Final-PJ.git
-                git fetch --all --prune
-                git checkout -B main origin/main
-
-                # 프론트 배포 매니페스트의 이미지 태그를 ECR 경로+빌드번호로 고정
-                sed -Ei 's|^([[:space:]]*)image:.*shop-frontend.*$|\\1image: '"${ECR_REPO}:${IMG_TAG}"'|' frontend-deployment.yaml
-
-                git config user.email "ci-bot@finalproject.com"
-                git config user.name  "jenkins-bot"
-
-                git add frontend-deployment.yaml
-                if ! git diff --cached --quiet; then
-                  git commit -m "[skip ci] ci(frontend): ${IMG_TAG} -> ${ECR_REPO}:${IMG_TAG}"
-                else
-                  echo "No changes to commit"
-                  exit 0
-                fi
-
-                git pull --rebase origin main || true
-                git push https://${GIT_USER}:${GIT_TOKEN}@github.com/fk36dks/Final-PJ.git HEAD:main
-              '''
+          def changed = sh(script: diffCmd, returnStdout: true).trim().split("\\r?\\n") as List
+          if (!changed.contains("__FIRST_BUILD__")) {
+            def onlyManifests = changed.every { it.startsWith('manifests/') }
+            if (onlyManifests) {
+              env.SKIP_BUILD = "true"
             }
           }
+
+          echo "SKIP_BUILD=${env.SKIP_BUILD}"
         }
+      }
+    }
+
+    stage('Login to ECR') {
+      when { expression { env.SKIP_BUILD != "true" } }
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
+          sh """
+            aws --version
+            aws ecr get-login-password --region ${AWS_REGION} \
+              | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+          """
+        }
+      }
+    }
+
+    stage('Build image') {
+      when { expression { env.SKIP_BUILD != "true" } }
+      steps {
+        dir('frontend') {
+          sh """
+            docker build -t ${ECR_REPO}:${IMG_TAG} .
+          """
+        }
+      }
+    }
+
+    stage('Push image') {
+      when { expression { env.SKIP_BUILD != "true" } }
+      steps {
+        sh "docker push ${ECR_REPO}:${IMG_TAG}"
+      }
+    }
+
+    stage('Update manifests (image tag -> BUILD_NUMBER)') {
+      when { expression { env.SKIP_BUILD != "true" } }
+      steps {
+        sh """
+          # frontend Deployment 이미지 태그 치환
+          sed -ri "s#(image:\\s*${ECR_REPO}:).*#\\1${IMG_TAG}#g" manifests/frontend-deployment.yaml
+
+          git config user.name  "jenkins-bot"
+          git config user.email "jenkins-bot@local"
+          git add manifests/frontend-deployment.yaml
+          git commit -m "chore(frontend): update image tag to ${IMG_TAG} [ci skip? false]"
+          git push origin ${GIT_BRANCH}
+        """
       }
     }
   }
 
   post {
     always {
-      sh '''
-        docker logout ${ECR_REPO%/*} || true
-      '''
-      cleanWs()
+      sh 'docker image prune -f || true'
     }
   }
 }

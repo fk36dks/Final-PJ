@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: finalproject-dev
+  name: shop
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/fk36dks/FinalProject.git
+    repoURL: https://github.com/fk36dks/Final-PJ.git   # 당신 레포로 맞추기
     targetRevision: main
     path: manifests
   destination:
     server: https://kubernetes.default.svc
-    namespace: finalproject-dev
+    namespace: shop
   syncPolicy:
     automated:
       prune: true

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-frontend
+  namespace: finalproject-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-frontend
+  template:
+    metadata:
+      labels:
+        app: shop-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:37
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-backend
+  namespace: finalproject-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-backend
+  template:
+    metadata:
+      labels:
+        app: shop-backend
+    spec:
+      containers:
+        - name: backend
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:38
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+

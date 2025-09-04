@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>주문/결제</title>
+<style>
+  :root{
+    --bg:#faf9fb; --card:#ffffff; --ink:#1d1b20;
+    --border:#ece7f6; --muted:#8a829b;
+    --accent:#6b47d6;               /* 보라 버튼 */
+    --accent-ghost:#efeaff;         /* 연보라 배경 */
+    --shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+
+  .wrap{max-width:920px;margin:0 auto;padding:24px 18px 120px}
+
+  /* 헤더 */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .back{all:unset;cursor:pointer;border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:#fff}
+  h1{margin:0;font-size:20px}
+
+  /* 카드 */
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:16px;box-shadow:0 1px 8px rgba(0,0,0,.03);margin-bottom:14px;
+  }
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .muted{color:var(--muted)}
+  .tag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+       padding:3px 8px;background:#fff5c2;border:1px solid #ffe79b;font-size:12px}
+  .dropdown{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fff}
+
+  .item{display:flex;align-items:center;gap:12px}
+  .thumb{width:56px;height:56px;border-radius:10px;border:1px solid var(--border);object-fit:cover;background:#f3f1fa}
+
+  /* 포인트 */
+  .point-area{display:grid;grid-template-columns:1fr 140px; gap:12px;align-items:center}
+  .point-input{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;text-align:right}
+  .point-input::-webkit-outer spin-button,.point-input::-webkit-inner-spin-button{appearance:none;margin:0}
+  .btn-ghost{all:unset;cursor:pointer;text-align:center;border:1px solid var(--border);border-radius:12px;
+             padding:12px;background:var(--accent-ghost);}
+
+  .notice{display:flex;align-items:center;gap:10px;border:1px solid #ffd8e1;background:#fff1f4;color:#e2556a;
+          border-radius:12px;padding:12px 14px;margin:12px 0}
+
+  /* 하단 결제 바 */
+  .paybar{
+    position:fixed;left:0;right:0;bottom:0;background:rgba(250,249,251,.85);backdrop-filter:saturate(120%) blur(6px);
+    border-top:1px solid var(--border);padding:12px 16px;z-index:50;
+  }
+  .pay-inner{max-width:920px;margin:0 auto}
+  .pay-btn{
+    width:100%;height:56px;border-radius:12px;border:1px solid #d9cff7;
+    background:linear-gradient(0deg,#6b47d6,#7a5cf0);
+    color:#fff;font-weight:800;font-size:18px;letter-spacing:.2px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;position:relative;
+    box-shadow:0 12px 24px rgba(107,71,214,.28);
+  }
+  .ship-pill{
+    position:absolute;right:10px;top:-10px;background:#fff3dc;border:1px solid #ffe0a6;
+    color:#4d3a00;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700;
+  }
+
+  /* 합계 표 */
+  .totals{max-width:920px;margin:14px auto 0;color:#433c55}
+  .totals .line{display:flex;justify-content:space-between;padding:6px 4px}
+  .totals .all{font-size:18px;font-weight:800}
+
+  /* 완료 모달 */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:60}
+  .modal.show{display:flex}
+  .sheet{width:min(420px,90%);background:#fff;border-radius:18px;border:1px solid var(--border);box-shadow:var(--shadow);
+         padding:22px}
+  .sheet h3{margin:0 0 8px}
+  .sheet p{margin:0 0 18px;color:#605a6e}
+  .sheet .actions{display:flex;gap:10px;justify-content:flex-end}
+  .btn{all:unset;cursor:pointer;background:#fff;border:1px solid var(--border);padding:10px 14px;border-radius:10px}
+  .btn.primary{background:linear-gradient(0deg,#6b47d6,#7a5cf0);color:#fff;border-color:#d9cff7}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <!-- 1) 이전 버튼: 전 페이지 이동 -->
+      <button class="back" onclick="history.back()">← 이전</button>
+      <h1>주문/결제</h1>
+    </div>
+
+    <!-- 주문상품 -->
+    <section class="card" id="orderCard">
+      <div class="row">
+        <div>
+          <strong>주문상품 총 <span id="itemCnt">1</span>개</strong>
+          <span class="tag">무료배송</span>
+        </div>
+        <div class="muted" id="orderFold" style="cursor:pointer">▾</div>
+      </div>
+      <div id="orderList" style="margin-top:10px">
+        <div class="item">
+          <img id="firstThumb" class="thumb" alt="상품 이미지">
+          <div style="flex:1">
+            <div><b id="firstName">상품</b></div>
+            <div class="muted"><span id="firstQty">1</span>개 · <span id="firstPrice">0</span>원</div>
+          </div>
+          <div><b id="firstSum">0</b>원</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 배송지 -->
+    <section class="card">
+      <div class="row">
+        <b>배송지</b>
+        <!-- 2) 변경하기: prompt로 정보 수정(직전 동작 복원) -->
+        <a href="#" class="muted" onclick="openAddrEdit(event)">변경하기</a>
+      </div>
+      <div style="margin-top:10px">
+        <div id="recvName"><b>허구</b></div>
+        <div id="recvPhone" class="muted">010-1234-4566</div>
+        <div id="recvAddr" class="muted">솔데스크</div>
+      </div>
+      <select class="dropdown" style="margin-top:12px">
+        <option>배송 시 요청사항을 선택해주세요</option>
+        <option>문 앞에 놓아주세요</option>
+        <option>경비실에 맡겨주세요</option>
+        <option>부재 시 연락 부탁드립니다</option>
+      </select>
+    </section>
+
+    <!-- 결제/포인트 -->
+    <section class="card">
+      <b>결제</b>
+      <div class="row" style="margin-top:12px">
+        <div>포인트</div>
+        <div class="point-area">
+          <input id="pointInput" class="point-input" type="number" min="0" value="0" />
+          <button id="useAll" class="btn-ghost">모두 사용</button>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:8px">
+        사용 가능 : <span id="canUse">0</span>원 | 보유 포인트 : <span id="ownPt">0</span>원
+      </div>
+    </section>
+
+    <div class="notice">🪙 지금 주문하면 더 아껴요!</div>
+
+    <!-- 합계 -->
+    <div class="totals">
+      <div class="line"><span>상품 합계</span><span id="sumLine">0원</span></div>
+      <div class="line"><span>포인트 사용</span><span id="ptLine">-0원</span></div>
+      <div class="line all"><span>결제 금액</span><span id="payLine">0원</span></div>
+    </div>
+  </div>
+
+  <!-- 하단 결제 버튼 -->
+  <div class="paybar">
+    <div class="pay-inner">
+      <button id="payBtn" class="pay-btn" type="button">
+        <span id="payAmtText">0</span> 원 결제하기
+        <span class="ship-pill">무료배송 🚚</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 결제 완료 모달 -->
+  <div id="doneModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+    <div class="sheet">
+      <h3 id="doneTitle">결제가 완료되었습니다 🎉</h3>
+      <p>주문이 정상적으로 접수되었어요. 마이페이지에서 주문내역을 확인할 수 있습니다.</p>
+      <div class="actions">
+        <button class="btn" onclick="location.href='mypage.html'">주문내역 보기</button>
+        <button class="btn primary" onclick="location.href='main.html'">메인으로</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ===== 유틸 ===== */
+  const fmt = n => (n||0).toLocaleString('ko-KR');
+  const getCart = () => { try{return JSON.parse(localStorage.getItem('cart'))||[]}catch(e){return[]} };
+
+  /* ===== 초기 데이터 ===== */
+  const ownPoints = Number(localStorage.getItem('points_balance')) || 35000;   // 보유 포인트(예시)
+  const cart = getCart();
+
+  // 합계(장바구니 기반, 없으면 payment_total 사용, 그것도 없으면 0)
+  let total = cart.reduce((s,i)=>s + (Number(i.price)||0)*(Number(i.qty)||1), 0);
+  if(!total) total = Number(localStorage.getItem('payment_total')) || 0;
+
+  // 주문 패널 채우기 (장바구니와 동일한 이미지 URL을 그대로 사용)
+  (function fillItem(){
+    const imgEl = document.getElementById('firstThumb');
+    const nameEl= document.getElementById('firstName');
+    const qtyEl = document.getElementById('firstQty');
+    const priceEl=document.getElementById('firstPrice');
+    const sumEl  =document.getElementById('firstSum');
+    const cntEl  =document.getElementById('itemCnt');
+
+    if(cart.length){
+      const it = cart[0];
+      const qty = Number(it.qty)||1, price = Number(it.price)||0;
+
+      // ★ 이미 저장된 AWS S3 절대경로를 그대로 사용 (cart와 동일 규칙)
+      const imgSrc = it.image || it.img || '';
+      imgEl.src = imgSrc || 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>'
+      );
+      imgEl.alt = (it.name||'상품') + ' 이미지';
+
+      nameEl.textContent = it.name || '상품';
+      qtyEl.textContent  = qty;
+      priceEl.textContent= fmt(price);
+      sumEl.textContent  = fmt(price*qty);
+      cntEl.textContent  = cart.reduce((s,x)=>s+(Number(x.qty)||1),0);
+    }else{
+      imgEl.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>'
+      );
+      imgEl.alt = '상품 이미지';
+    }
+  })();
+
+  // 합계 영역 표시
+  document.getElementById('sumLine').textContent = fmt(total)+'원';
+  document.getElementById('payLine').textContent = fmt(total)+'원';
+  document.getElementById('payAmtText').textContent = fmt(total);
+  document.getElementById('canUse').textContent = fmt(Math.min(total, ownPoints));
+  document.getElementById('ownPt').textContent = fmt(ownPoints);
+
+  /* 주문 리스트 접기/펼치기 */
+  document.getElementById('orderFold').addEventListener('click',()=>{
+    const box = document.getElementById('orderList');
+    box.style.display = (box.style.display==='none'?'block':'none');
+  });
+
+  /* ===== 포인트 사용 ===== */
+  const pointInput = document.getElementById('pointInput');
+  const useAllBtn   = document.getElementById('useAll');
+  const ptLine = document.getElementById('ptLine');
+  const payLine = document.getElementById('payLine');
+  const payAmtText = document.getElementById('payAmtText');
+
+  function clampPoint(v){
+    v = Math.max(0, Math.floor(Number(v)||0));
+    const maxUse = Math.min(total, ownPoints);
+    return Math.min(v, maxUse);
+  }
+  function updatePay(){
+    const use = clampPoint(pointInput.value);
+    pointInput.value = use;
+    const pay = Math.max(0, total - use);
+    ptLine.textContent = '-' + fmt(use) + '원';
+    payLine.textContent = fmt(pay) + '원';
+    payAmtText.textContent = fmt(pay);
+    document.getElementById('canUse').textContent = fmt(Math.min(total, ownPoints));
+  }
+  useAllBtn.addEventListener('click', ()=>{
+    pointInput.value = Math.min(total, ownPoints);
+    updatePay();
+  });
+  pointInput.addEventListener('input', updatePay);
+  updatePay();
+
+  /* ===== 배송지 변경 (직전 방식 유지) ===== */
+  function openAddrEdit(e){
+    e.preventDefault();
+    const name = prompt('수령인 이름을 입력하세요', document.getElementById('recvName').innerText.trim());
+    if(name!==null){ document.getElementById('recvName').innerHTML = '<b>'+name+'</b>'; }
+    const phone = prompt('연락처를 입력하세요', document.getElementById('recvPhone').innerText.trim());
+    if(phone!==null){ document.getElementById('recvPhone').textContent = phone; }
+    const addr = prompt('주소를 입력하세요', document.getElementById('recvAddr').innerText.trim());
+    if(addr!==null){ document.getElementById('recvAddr').textContent = addr; }
+  }
+  window.openAddrEdit = openAddrEdit;
+
+  /* ===== 결제 처리(모달) ===== */
+  const modal = document.getElementById('doneModal');
+  document.getElementById('payBtn').addEventListener('click', ()=>{
+    const btn = document.getElementById('payBtn');
+    const old = btn.innerHTML;
+    btn.innerHTML = '결제 처리중…';
+    btn.disabled = true;
+
+    setTimeout(()=>{
+      // 포인트 차감 시뮬레이션
+      const used = clampPoint(pointInput.value);
+      const remain = Math.max(0, (Number(localStorage.getItem('points_balance'))||ownPoints) - used);
+      localStorage.setItem('points_balance', remain.toString());
+
+      btn.disabled = false;
+      btn.innerHTML = old;
+      modal.classList.add('show');
+    }, 900);
+  });
+
+  // 모달 외부 클릭 닫기
+  modal.addEventListener('click',(e)=>{ if(e.target===modal){ modal.classList.remove('show'); }});
+</script>
+</body>
+</html>

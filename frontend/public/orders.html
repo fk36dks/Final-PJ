@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>주문내역</title>
+<style>
+  :root{
+    --bg:#faf9fb; --card:#ffffff; --ink:#1d1b20; --muted:#8a829b;
+    --border:#ece7f6; --accent:#6b47d6; --chip:#efeaff; --shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+  .container{max-width:980px;margin:0 auto;padding:22px 16px 80px}
+
+  /* Header */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .back{all:unset;cursor:pointer;border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:#fff}
+  h1{margin:0;font-size:20px}
+  .nav{margin-left:auto;display:flex;gap:8px}
+  .pill{border:1px solid var(--border);background:#f6f2ff;height:30px;padding:0 10px;border-radius:999px;
+        display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:inherit}
+
+  /* Filter chips */
+  .filters{display:flex;gap:8px;margin:4px 0 14px}
+  .chip{all:unset;border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}
+  .chip.active{background:var(--chip);border-color:#d9cff7;color:#3d2fb1;font-weight:700}
+
+  /* Order card */
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.03);margin-bottom:12px;
+  }
+  .head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .order-id{font-weight:800}
+  .ghost{all:unset;cursor:pointer;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#fff}
+  .meta{color:var(--muted);font-size:13px}
+  .items{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+  .it{display:flex;gap:10px;align-items:center}
+  .thumb{width:56px;height:56px;border-radius:10px;border:1px solid var(--border);object-fit:cover;background:#f3f1fa}
+  .name{font-weight:700}
+  .sum{margin-top:10px;display:flex;justify-content:flex-end;gap:18px;color:#433c55}
+  .sum b{font-size:16px}
+  /* 상세 섹션은 사용하지 않으니 스타일 유지해도 돼요(DOM에 추가하지 않음) */
+  .detail{margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;display:none}
+  .detail.show{display:block}
+  .row{display:flex;justify-content:space-between;padding:4px 0}
+  .empty{padding:40px 20px;text-align:center;color:#6c6780;border:1px dashed var(--border);border-radius:14px;background:#fff}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <button class="back" onclick="history.back()">← 이전</button>
+      <h1>주문내역</h1>
+      <div class="nav">
+        <a class="pill" href="main.html">메인</a>
+        <a class="pill" href="cart.html">장바구니</a>
+        <a class="pill" href="mypage.html">마이페이지</a>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="chip" data-filter="all">전체</button>
+      <button class="chip active" data-filter="결제완료">결제완료</button>
+      <button class="chip" data-filter="배송준비중">배송준비중</button>
+      <button class="chip" data-filter="배송중">배송중</button>
+      <button class="chip" data-filter="배송완료">배송완료</button>
+    </div>
+
+    <div id="list"></div>
+
+    <div id="empty" class="empty" style="display:none">
+      주문 내역이 없습니다.<br/>
+      <a class="pill" href="main.html" style="margin-top:10px;display:inline-flex">메인으로 이동</a>
+    </div>
+  </div>
+
+  <!-- 하단 '쇼핑 계속하기' 바는 요청에 따라 삭제했습니다 -->
+
+<script>
+/* ---------- 공통 ---------- */
+const S3_BASE = 'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/';
+const fmt = n => (n||0).toLocaleString('ko-KR');
+function readOrders(){
+  try { return JSON.parse(localStorage.getItem('orders'))||[]; }
+  catch(e){ return []; }
+}
+function readCart(){
+  try { return JSON.parse(localStorage.getItem('cart'))||[]; }
+  catch(e){ return []; }
+}
+const s3 = (raw) => {
+  if(!raw) return '';
+  return raw.startsWith('http') ? raw : (S3_BASE + raw.split('/').pop());
+};
+
+/* ---------- 결제 직후 동기화: 장바구니 → 주문내역 ---------- */
+(function ensureRecentOrderFromCart(){
+  const cart = readCart();
+  if(!cart.length) return;
+
+  const items = cart.map(i => ({
+    name: i.name, qty: Number(i.qty)||1, price: Number(i.price)||0,
+    image: s3(i.image || i.img || i.thumbnail || i.thumb || '')
+  }));
+  const sig = JSON.stringify(items.map(x => [x.name, x.qty, x.price, x.image]));
+  if(localStorage.getItem('last_order_sig') === sig) return;
+
+  const orders = readOrders();
+  const subtotal = items.reduce((s,x)=>s+x.price*x.qty,0);
+  orders.unshift({
+    id: 'OD' + Date.now(),
+    date: new Date().toISOString(),
+    items,
+    subtotal,
+    pointsUsed: 0,
+    total: subtotal,
+    status: '결제완료'
+    // 배송지/메모 정보는 요청에 따라 표시하지 않습니다.
+  });
+  localStorage.setItem('orders', JSON.stringify(orders));
+  localStorage.setItem('last_order_sig', sig);
+})();
+
+/* ---------- 렌더링 ---------- */
+const listEl = document.getElementById('list');
+const emptyEl = document.getElementById('empty');
+let ORDERS = readOrders();
+
+/**
+ * @param {string} filter - 'all' | '결제완료' | '배송준비중' | '배송중' | '배송완료'
+ * @param {boolean} autoExpand - true면 상세 자동 펼침
+ */
+function render(filter='all', autoExpand=false){
+  listEl.innerHTML = '';
+  const rows = ORDERS.filter(o => filter==='all' ? true : (o.status===filter));
+  if(rows.length===0){
+    emptyEl.style.display='block';
+    return;
+  }
+  emptyEl.style.display='none';
+
+  rows.forEach(o=>{
+    const card = document.createElement('section');
+    card.className = 'card';
+
+    const head = document.createElement('div');
+    head.className = 'head';
+    const title = document.createElement('div');
+    title.innerHTML = `<span class="order-id" role="button" title="복사">${o.id}</span>
+                       <span class="status">· ${o.status||'결제완료'}</span>
+                       <div class="meta">${new Date(o.date||Date.now()).toLocaleString('ko-KR')}</div>`;
+    head.appendChild(title);
+
+    const toggle = document.createElement('button');
+    toggle.className='ghost';
+    toggle.textContent='상세';
+    head.appendChild(toggle);
+
+    const items = document.createElement('div');
+    items.className = 'items';
+    (o.items||[]).forEach(it=>{
+      const row = document.createElement('div');
+      row.className='it';
+
+      const img = document.createElement('img');
+      img.className='thumb';
+      const raw = it.image || it.img || it.thumbnail || it.thumb || '';
+      img.src = raw ? s3(raw) : 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>');
+      img.alt = (it.name||'상품')+' 이미지';
+      row.appendChild(img);
+
+      const info = document.createElement('div');
+      info.style.flex='1';
+      info.innerHTML = `<div class="name">${it.name||'상품'}</div>
+                        <div class="meta">${it.qty||1}개 · ${fmt(it.price||0)}원</div>`;
+      row.appendChild(info);
+
+      const rsum = document.createElement('div');
+      rsum.innerHTML = `<b>${fmt((it.price||0)*(it.qty||1))}</b>원`;
+      row.appendChild(rsum);
+
+      items.appendChild(row);
+    });
+
+    const sum = document.createElement('div');
+    sum.className='sum';
+    sum.innerHTML = `<div>포인트 사용 <b>- ${fmt(o.pointsUsed||0)}</b>원</div>
+                     <div>결제 금액 <b>${fmt(o.total||0)}</b>원</div>`;
+
+    /* ▼ 요청에 따라 배송지/메모 상세는 표시하지 않음(섹션 생성은 하되 DOM에 추가하지 않음) */
+    const detail = document.createElement('div');
+    detail.className='detail';
+
+    toggle.addEventListener('click',()=>{
+      const opened = detail.classList.toggle('show'); // DOM에 없어도 오류 없음
+      toggle.textContent = opened ? '접기' : '상세';
+    });
+
+    title.querySelector('.order-id').addEventListener('click',async (e)=>{
+      try{ await navigator.clipboard.writeText(o.id); e.target.innerText=o.id+'(복사됨)'; setTimeout(()=>e.target.innerText=o.id,900);}catch(_){}
+    });
+
+    card.appendChild(head);
+    card.appendChild(items);
+    card.appendChild(sum);
+    /* detail 은 append 하지 않습니다. */
+    listEl.appendChild(card);
+
+    if(autoExpand){
+      // 상세 자동 펼침 요청이 와도 표시 영역이 없으니 버튼 텍스트만 동기화
+      toggle.textContent = '상세';
+    }
+  });
+}
+
+/* ---------- 필터 ---------- */
+document.querySelectorAll('.chip').forEach(ch=>{
+  ch.addEventListener('click',()=>{
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    ch.classList.add('active');
+    const f = ch.dataset.filter;
+    render(f, f==='결제완료');
+  });
+});
+
+/* ---------- 첫 렌더 ---------- */
+render('결제완료', true);
+</script>
+</body>
+</html>

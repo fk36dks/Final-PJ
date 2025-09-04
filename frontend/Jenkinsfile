@@ -70,7 +70,7 @@ pipeline {
       steps {
         dir('frontend') {
           sh """
-            docker build -t ${ECR_REPO}:${IMG_TAG} .
+            docker build --build-arg BUILD_TAG=${IMG_TAG} -t ${ECR_REPO}:${IMG_TAG} .
           """
         }
       }

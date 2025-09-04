@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>최근 본 상품</title>
+<style>
+  :root{ --bg:#faf9fb; --card:#fff; --border:#ece7f6; --ink:#111; --muted:#6b7280; --accent:#6b47d6; }
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
+  .bar{max-width:1080px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+  .brand{font-weight:700;font-size:20px;text-decoration:none;color:inherit}
+  .pill{border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:13px;text-decoration:none;color:inherit;background:#f6f2ff}
+  main{max-width:1080px;margin:0 auto;padding:18px 16px}
+  .title{font-size:22px;font-weight:800;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .thumb{aspect-ratio:1/1;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .name{margin-bottom:6px}
+  .price{font-weight:700}
+  .empty{border:1px dashed var(--border);border-radius:14px;padding:28px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a class="brand" href="main.html">Kolon</a>
+    <div>
+      <a class="pill" href="cart.html">장바구니</a>
+      <a class="pill" href="mypage.html">마이페이지</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <h1 class="title">최근 본 상품</h1>
+  <section class="grid" id="list"></section>
+  <div class="empty" id="emptyBox" style="display:none">최근 본 상품이 없습니다.</div>
+</main>
+
+<script>
+  const REC_KEY='recent';
+  const getRec=()=>{ try{return JSON.parse(localStorage.getItem(REC_KEY))||[]}catch(_){return[]} };
+  const listEl=document.getElementById('list'), empty=document.getElementById('emptyBox');
+  const data=getRec();
+  if(data.length===0){ empty.style.display='block'; }
+  else{
+    data.forEach(p=>{
+      const el=document.createElement('div'); el.className='card';
+      el.innerHTML=`<div class="thumb"><img src="${p.img}" alt="${p.name}"></div>
+      <div class="name">${p.name}</div>
+      <div class="price">${Number(p.price).toLocaleString('ko-KR')}원</div>`;
+      listEl.appendChild(el);
+    });
+  }
+</script>
+</body>
+</html>

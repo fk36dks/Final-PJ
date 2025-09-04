@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>검색 결과</title>
+<style>
+  :root{
+    --bg:#faf9fb; --card:#fff; --border:#ece7f6; --ink:#111; --muted:#6b7280;
+    --tint:#f1eaff; --pill:#f6f2ff; --accent:#6b47d6; --shadow:0 1px 10px rgba(0,0,0,.05);
+    --container:1120px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+
+  .topbar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
+  .bar{max-width:var(--container);margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+  .left,.right{display:flex;align-items:center;gap:12px}
+  .brand{font-weight:700;text-decoration:none;color:inherit}
+  .pill{border:1px solid var(--border);background:var(--pill);height:30px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit}
+  .badge{min-width:18px;height:18px;border-radius:999px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;margin-left:6px}
+
+  .container{max-width:var(--container);margin:0 auto;padding:18px 16px}
+
+  /* 검색 바 */
+  .search-wrap{margin:12px 0 18px;display:grid;grid-template-columns:1fr auto;gap:10px}
+  .search{display:flex;align-items:center;background:var(--tint);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+  .search input{flex:1;border:0;background:transparent;outline:none}
+  .search-btn{
+    width:44px;height:44px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;
+    display:grid;place-items:center;box-shadow:var(--shadow);
+  }
+  .search-btn svg{width:22px;height:22px;stroke:#9aa0a6}
+
+  .page-head{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;margin-top:2px}
+  .ico-back{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#555;text-decoration:none}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .thumb{aspect-ratio:1/1;background:#fff;display:grid;place-items:center}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .body{padding:12px}
+  .name{margin-bottom:6px}
+  .price{font-weight:700}
+  .footer{padding:10px 12px;background:var(--pill)}
+  .btn{width:100%;border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px;cursor:pointer}
+  .btn:hover{background:#fdfcff}
+
+  /* 로딩 오버레이 */
+  .loader{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:9999}
+  .loader.show{display:flex}
+  .spin{width:36px;height:36px;border-radius:50%;border:3px solid #d8d6e3;border-top-color:#6b47d6;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="bar">
+    <div class="left">
+      <!-- 메인으로 배너 삭제, Kolon은 메인으로 링크 -->
+      <a class="brand" href="main.html">Kolon</a>
+    </div>
+    <div class="right">
+      <a class="pill" >로그아웃</a>
+      <!-- 회원가입 버튼 제거 -->
+      <a class="pill" href="cart.html" id="toCart">장바구니 <span class="badge" id="cartCount">0</span></a>
+      <a class="pill" href="mypage.html">마이페이지</a>
+      <!-- 우측 끝 포인트 배너 -->
+      <a class="pill" href="points.html" id="pointsLink">포인트</a>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- 검색 바 -->
+  <div class="search-wrap">
+    <form class="search" id="searchForm">
+      <input id="q" placeholder="검색어를 입력하세요" />
+    </form>
+    <button class="search-btn" id="searchBtn" title="검색">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="page-head">
+    <a class="ico-back" href="main.html" aria-label="뒤로가기">←</a>
+    <span id="resultTitle">검색 결과</span>
+  </div>
+
+  <section class="grid" id="list">
+    <!-- 결과 목록 -->
+  </section>
+</main>
+
+<!-- 로딩 오버레이 -->
+<div class="loader" id="loader"><div class="spin"></div></div>
+
+<script>
+  /* 공통: 장바구니 저장/배지 */
+  const CART_KEY='cart';
+  const getCart=()=>{ try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(e){return[]} };
+  const setCart=(v)=>{ localStorage.setItem(CART_KEY,JSON.stringify(v)); updateBadge(); };
+  const updateBadge=()=>{ const n=getCart().reduce((s,i)=>s+(i.qty||0),0); const b=document.getElementById('cartCount'); if(b) b.textContent=n; };
+  updateBadge();
+
+  /* 포인트 배너: 0P 고정 표시 */
+  const pLink = document.getElementById('pointsLink');
+  if (pLink) pLink.textContent = '포인트 0P';
+
+  /* 검색 파라미터로 타이틀 표시 */
+  const params = new URLSearchParams(location.search);
+  const qParam = params.get('q') || '';
+  const qInput = document.getElementById('q');
+  const resultTitle = document.getElementById('resultTitle');
+  if(qParam){ qInput.value = qParam; resultTitle.textContent = `“${qParam}” 검색 결과`; }
+
+  /* 검색 버튼 (데모 동작: 새로고침식 이동) */
+  const searchForm=document.getElementById('searchForm');
+  const searchBtn=document.getElementById('searchBtn');
+  function submitSearch(e){
+    e.preventDefault();
+    const q = qInput.value.trim();
+    location.href = `search.html?q=${encodeURIComponent(q)}`;
+  }
+  searchForm.addEventListener('submit',submitSearch);
+  searchBtn.addEventListener('click',submitSearch);
+
+  /* 데모 데이터 (이미지 경로는 S3 절대경로) */
+  const data=[
+    {id:'h4',name:'후드티4',price:43000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie4.jpg'},
+    {id:'h3',name:'후드티2',price:25000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie3.jpg'},
+    {id:'h6',name:'후드티3',price:31000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie6.jpg'},
+    {id:'h5',name:'후드티5',price:21000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie5.jpg'},
+    {id:'h7',name:'후드티6',price:38000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie7.jpg'},
+    {id:'h8',name:'후드티1',price:30000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie8.jpg'}
+  ];
+  const list=document.getElementById('list');
+  const fmt=n=>Number(n).toLocaleString('ko-KR')+'원';
+
+  function render(items){
+    list.innerHTML='';
+    items.forEach(p=>{
+      const el=document.createElement('article');
+      el.className='card';
+      el.innerHTML=`
+        <div class="thumb"><img src="${p.img}" alt="${p.name}"></div>
+        <div class="body">
+          <div class="name">${p.name}</div>
+          <div class="price">${fmt(p.price)}</div>
+        </div>
+        <div class="footer"><button class="btn" data-id="${p.id}">장바구니 담기</button></div>
+      `;
+      list.appendChild(el);
+    });
+  }
+  // 간단 필터(데모)
+  const keyword = qParam.trim();
+  render(keyword ? data.filter(d=>d.name.includes(keyword)) : data);
+
+  /* 담기 */
+  list.addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-id]'); if(!btn) return;
+    const id=btn.dataset.id; const p=data.find(x=>x.id===id);
+    const cart=getCart(); const i=cart.findIndex(x=>x.id===id);
+    if(i>-1) cart[i].qty=(cart[i].qty||1)+1; else cart.push({...p,qty:1});
+    setCart(cart); btn.textContent='담김!'; setTimeout(()=>btn.textContent='장바구니 담기',800);
+  });
+
+  /* 장바구니로 이동 시 로딩 전환 */
+  const loader=document.getElementById('loader');
+  document.getElementById('toCart').addEventListener('click',function(e){
+    e.preventDefault(); loader.classList.add('show'); setTimeout(()=>location.href='cart.html',450);
+  });
+</script>
+</body>
+</html>

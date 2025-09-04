@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>남성 상의</title>
+<style>
+:root{--bg:#faf9fb;--card:#fff;--bd:#ece7f6;--ink:#1d1b20;--muted:#7b7488;--pill:#f6f2ff;--acc:#6b47d6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+.top{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--bd)}
+.bar{max-width:1100px;margin:0 auto;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.brand{font-weight:800;color:inherit;text-decoration:none}
+.nav a{border:1px solid var(--bd);background:var(--pill);padding:6px 10px;border-radius:999px;margin-left:8px;text-decoration:none;color:inherit}
+.badge{display:inline-flex;align-items:center;justify-content:center;background:var(--acc);color:#fff;min-width:18px;height:18px;border-radius:999px;font-size:12px;padding:0 6px;margin-left:6px}
+
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+h1{margin:6px 0 14px;font-size:20px}
+.list{display:flex;flex-direction:column;gap:12px}
+.row{display:grid;grid-template-columns:120px 1fr auto;gap:16px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px}
+.thumb{width:120px;height:120px;object-fit:contain;background:#fff;border:1px solid var(--bd);border-radius:10px}
+.title{font-weight:700;margin:0 0 6px}
+.meta{font-size:13px;color:var(--muted)}
+.price{font-weight:800;margin-top:6px}
+.actions{display:flex;align-items:center;gap:10px}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:28px;height:28px;border-radius:50%;border:1px solid var(--bd);background:#fff;cursor:pointer}
+.qty{min-width:20px;text-align:center}
+.cart{border:1px solid var(--bd);background:var(--pill);height:36px;padding:0 12px;border-radius:10px;cursor:pointer}
+.cart:hover{background:#efeaff;border-color:#d9cff7}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="main.html">Kolon</a>
+    <div class="nav">
+      <a href="cart.html">장바구니 <span id="cartCount" class="badge">0</span></a>
+      <a href="mypage.html">마이페이지</a>
+      <a href="points.html">포인트</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>패션 &gt; 남성의류 &gt; 상의</h1>
+  <section id="list" class="list"></section>
+</main>
+
+<script>
+const CART_KEY='cart';
+const fmt=n=> (n||0).toLocaleString('ko-KR');
+const getCart=()=>{ try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(e){return[]} };
+const setCart=v=> localStorage.setItem(CART_KEY, JSON.stringify(v));
+function updateBadge(){
+  document.getElementById('cartCount').textContent = getCart().reduce((s,i)=>s+(+i.qty||0),0);
+}
+
+// 기본 품목 + 추가 후디 이미지
+function data(){
+  const a=[];
+  for(let i=1;i<=6;i++){
+    a.push({img:`https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/M${i}.jpg`, name:`남성 상의 ${i}`, price: 21000 + (i%6)*4000});
+  }
+  // 요청 추가: Hoodie3/7/8
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie3.jpg', name:'남성 후드티 3', price: 28900});
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie7.jpg', name:'남성 후드티 7', price: 31800});
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie8.jpg', name:'남성 후드티 8', price: 33200});
+  return a;
+}
+
+function row(it){
+  const r=document.createElement('article');
+  r.className='row';
+  r.innerHTML = `
+    <img class="thumb" src="${it.img}" alt="${it.name}"/>
+    <div>
+      <div class="title">${it.name}</div>
+      <div class="meta">오늘출발 · 무료배송</div>
+      <div class="price">${fmt(it.price)}원</div>
+    </div>
+    <div class="actions">
+      <div class="step">
+        <button class="minus">−</button>
+        <span class="qty">1</span>
+        <button class="plus">＋</button>
+      </div>
+      <button class="cart">장바구니</button>
+    </div>`;
+  const qtyEl = r.querySelector('.qty'); let q=1;
+  r.querySelector('.minus').onclick = ()=>{ q=Math.max(1,q-1); qtyEl.textContent=q; };
+  r.querySelector('.plus').onclick  = ()=>{ q++; qtyEl.textContent=q; };
+  r.querySelector('.cart').onclick  = ()=>{
+    const c=getCart();
+    const i=c.findIndex(x=>x.name===it.name);
+    if(i>-1) c[i].qty=(+c[i].qty||0)+q;
+    else c.push({name:it.name,price:it.price,qty:q,image:it.img});
+    setCart(c); updateBadge();
+    r.querySelector('.cart').textContent='담겼습니다 ✓';
+    setTimeout(()=> r.querySelector('.cart').textContent='장바구니', 900);
+  };
+  return r;
+}
+
+const list=document.getElementById('list');
+data().forEach(x=> list.append(row(x)));
+updateBadge();
+</script>
+</body>
+</html>

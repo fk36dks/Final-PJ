@@ -1,0 +1,20 @@
+# VCS/IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Node 등 불필요 캐시(있다면)
+node_modules
+dist
+build
+
+# OS 잡파일
+.DS_Store
+Thumbs.db
+
+# 기타 대용량/불필요
+**/*.zip
+**/*.psd
+**/*.ai
+

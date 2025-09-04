@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolon - 포인트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #F5F5F5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #007AFF;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .user-info {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .user-avatar {
+            font-size: 32px;
+            background: #F0F0F0;
+            padding: 15px;
+            border-radius: 50%;
+        }
+        .user-details h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .user-details p {
+            color: #666;
+            font-size: 14px;
+        }
+        .points-card {
+            background: linear-gradient(135deg, #007AFF, #0056CC);
+            color: white;
+            border-radius: 15px;
+            padding: 30px 25px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        .points-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        .points-amount {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .points-note {
+            font-size: 12px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        .transactions-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #F0F0F0;
+        }
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        .transaction-info h4 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+        .transaction-date {
+            font-size: 13px;
+            color: #666;
+        }
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .transaction-amount.positive {
+            color: #2E7D32;
+        }
+        .transaction-amount.negative {
+            color: #D32F2F;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #F3F3F3;
+            border-top: 4px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            background-color: #FFE6E6;
+            color: #D32F2F;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .refresh-btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <h1>포인트</h1>
+    </div>
+    <div class="container">
+        <div class="user-info" id="user-info">
+            <div class="user-avatar">👤</div>
+            <div class="user-details">
+                <h2 id="user-name">사용자</h2>
+                <p>내 계정 관리</p>
+            </div>
+        </div>
+        <div class="points-card">
+            <h3>잔여 포인트</h3>
+            <div class="points-amount" id="points-amount">0 P</div>
+            <div class="points-note">※ 포인트는 RDS에서 관리됩니다</div>
+        </div>
+        <div class="transactions-section">
+            <h3 class="section-title">포인트 내역</h3>
+            <div id="loading-spinner" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+            <div id="error-container" class="error-message" style="display: none;">
+                <div id="error-message"></div>
+                <button class="refresh-btn" onclick="loadUserPoints()">다시 시도</button>
+            </div>
+            <div id="transactions-list"></div>
+        </div>
+    </div>
+    <script>
+        let currentUser = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUserSession();
+            loadUserPoints();
+        });
+            currentUser = {
+                id: userId,
+                name: userName,
+                token: token
+            };
+            // Update user info in UI
+            document.getElementById('user-name').textContent = userName || '사용자';
+        }
+        async function loadUserPoints() {
+            if (!currentUser) return;
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const errorContainer = document.getElementById('error-container');
+            const transactionsList = document.getElementById('transactions-list');
+            const pointsAmount = document.getElementById('points-amount');
+            try {
+                // Show loading state
+                loadingSpinner.style.display = 'flex';
+                errorContainer.style.display = 'none';
+                transactionsList.innerHTML = '';
+                // Fetch user points and transactions
+                const response = await fetch(`/api/account/points?user_id=${currentUser.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || '포인트 정보를 불러오는데 실패했습니다.');
+                }
+                // Update points display
+                pointsAmount.textContent = `${data.points.toLocaleString()} P`;
+                // Update user name if available
+                if (data.user_name) {
+                    document.getElementById('user-name').textContent = data.user_name;
+                }
+                // Render transactions
+                renderTransactions(data.transactions || []);
+            } catch (error) {
+                console.error('Error loading points:', error);
+                showError(error.message);
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        function renderTransactions(transactions) {
+            const transactionsList = document.getElementById('transactions-list');
+            if (transactions.length === 0) {
+                transactionsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">:메모:</div>
+                        <p>아직 포인트 내역이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+            const transactionsHtml = transactions.map(transaction => {
+                const date = new Date(transaction.created_at).toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const amountClass = transaction.delta > 0 ? 'positive' : 'negative';
+                const amountText = transaction.delta > 0 ?
+                    `+${transaction.delta.toLocaleString()}P` :
+                    `${transaction.delta.toLocaleString()}P`;
+                return `
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <h4>${transaction.reason}</h4>
+                            ${transaction.note ? `<p class="transaction-note">${transaction.note}</p>` : ''}
+                            <div class="transaction-date">${date}</div>
+                        </div>
+                        <div class="transaction-amount ${amountClass}">
+                            ${amountText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            transactionsList.innerHTML = transactionsHtml;
+        }
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorContainer.style.display = 'block';
+        }
+        function goBack() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.location.href = '/main.html';
+            }
+        }
+        // Auto-refresh points every 30 seconds
+        setInterval(() => {
+            if (currentUser && document.visibilityState === 'visible') {
+                loadUserPoints();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>개인정보 설정</title>
+<style>
+  :root{
+    --bg:#faf9fb; --card:#fff; --border:#ece7f6; --ink:#111; --muted:#6b7280;
+    --pill:#f6f2ff; --accent:#6b47d6; --shadow:0 1px 10px rgba(0,0,0,.05);
+    --container:1120px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+
+  /* 상단바 (통일: 햄버거 없음, Kolon 로고 링크) */
+  .topbar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
+  .topbar .bar{max-width:var(--container);margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+  .left,.right{display:flex;align-items:center;gap:12px}
+  .brand{font-weight:700;text-decoration:none;color:inherit}
+  .pill{border:1px solid var(--border);background:var(--pill);height:30px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-decoration:none;color:inherit}
+
+  /* 본문 */
+  .container{max-width:var(--container);margin:0 auto;padding:18px 16px}
+  .page-head{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
+  .ico-back{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#555;text-decoration:none}
+  h1{font-size:20px;font-weight:800;margin:10px 0 20px}
+
+  /* 프로필 카드 */
+  .profile-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+  .who{display:flex;align-items:center;gap:14px}
+  .avatar{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:#eee;border:1px solid var(--border);font-size:36px}
+  .id{color:var(--muted);margin-top:2px}
+
+  .btn-row{display:flex;gap:12px;margin-top:14px}
+  .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer}
+  .btn:hover{background:#fafbff}
+
+  /* 목록 카드 */
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .row{display:flex;align-items:center;gap:12px;padding:16px;border-top:1px solid var(--border);text-decoration:none;color:inherit}
+  .row:first-child{border-top:0}
+  .row:hover{background:#fafbff}
+  .label{flex:1}
+  .chev{width:20px;height:20px;opacity:.55}
+</style>
+</head>
+<body>
+  <!-- 통일된 상단 -->
+  <header class="topbar">
+    <div class="bar">
+      <div class="left">
+        <a class="brand" href="main.html">Kolon</a>
+      </div>
+      <div class="right">
+        <a class="pill" >로그아웃</a>
+        <!-- 회원가입 버튼 삭제 -->
+        <a class="pill" href="cart.html">장바구니</a>
+        <a class="pill" href="mypage.html">마이페이지</a>
+        <a class="pill" href="points.html">포인트</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-head">
+      <a class="ico-back" href="mypage.html">←</a>
+      <span>개인정보 설정</span>
+    </div>
+    <h1>설정</h1>
+
+    <!-- 프로필 카드 -->
+    <section class="profile-card">
+      <div class="who">
+        <div class="avatar">👤</div>
+        <div>
+          <div id="userName" style="font-weight:700">사용자</div>
+          <!-- ID 행 삭제 -->
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="alert('프로필 이미지 변경 (데모)')">프로필 이미지 변경</button>
+        <button class="btn" onclick="alert('닉네임 변경 (데모)')">닉네임 변경</button>
+      </div>
+    </section>
+
+    <!-- 항목 리스트 -->
+    <section class="card">
+      <a class="row" href="#" onclick="alert('회원정보 변경 (데모)');return false;">
+        <div class="label">회원정보 변경</div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="row" href="#" onclick="alert('비밀번호 변경 (데모)');return false;">
+        <div class="label">비밀번호 변경</div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="row" href="#" onclick="alert('나의 맞춤 정보 (데모)');return false;">
+        <div class="label">나의 맞춤 정보</div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="row" href="#" onclick="alert('간편 로그인 설정 (데모)');return false;">
+        <div class="label">간편 로그인 설정</div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </section>
+  </main>
+
+  <script>
+    /* 이름을 항상 '사용자'로 고정 */
+    (function(){
+      const el = document.getElementById('userName');
+      if(el) el.textContent = '사용자';
+    })();
+    /* ID는 표시하지 않으므로 관련 스크립트 제거 */
+  </script>
+</body>
+</html>

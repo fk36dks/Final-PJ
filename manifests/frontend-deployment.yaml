@@ -1,10 +1,12 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: shop-frontend
-  namespace: shop
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0     # 항상 가용 1개 유지
+      maxSurge: 1           # 새 파드 1개 더 띄워 교체
+  minReadySeconds: 5        # 새 파드 안정화 대기(선택)
+  progressDeadlineSeconds: 300
   selector:
     matchLabels:
       app: shop-frontend
@@ -21,13 +23,13 @@ spec:
             - containerPort: 80
           readinessProbe:
             httpGet:
-              path: /healthz     # ✅ 여기
+              path: /healthz
               port: 80
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /healthz     # ✅ 여기
+              path: /healthz
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 20

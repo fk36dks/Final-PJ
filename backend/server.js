@@ -3,9 +3,9 @@ const mysql = require("mysql2/promise");
 require("dotenv").config();
 
 const app = express();
-const port = 8080;
+const port = process.env.PORT || 5000;
 
-// Health check endpoint
+// health check (K8s probes)
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });

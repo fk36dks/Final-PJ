@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:38
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:56
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
@@ -23,19 +23,19 @@ spec:
             httpGet:
               path: /health
               port: 5000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: 2
+            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
               port: 5000
-            initialDelaySeconds: 15
-            periodSeconds: 20
+            initialDelaySeconds: 10
+            periodSeconds: 10
 

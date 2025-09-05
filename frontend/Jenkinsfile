@@ -56,7 +56,7 @@ pipeline {
       when { expression { env.SKIP_BUILD != "true" } }
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
-          sh """
+          sh '''
             set -e
             # (옵션) ECR 리포 없으면 생성
             aws ecr describe-repositories --repository-names "${ECR_REPO##*/}" >/dev/null 2>&1 || \
@@ -64,7 +64,7 @@ pipeline {
 
             aws ecr get-login-password --region ${AWS_REGION} \
               | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-          """
+          '''
         }
       }
     }
@@ -73,10 +73,10 @@ pipeline {
       when { expression { env.SKIP_BUILD != "true" } }
       steps {
         dir('frontend') {
-          sh """
+          sh '''
             set -e
             docker build --build-arg BUILD_TAG=${IMG_TAG} -t ${ECR_REPO}:${IMG_TAG} .
-          """
+          '''
         }
       }
     }
@@ -86,29 +86,29 @@ pipeline {
       steps {
         script {
           // 태그 추가(ECR: latest, Docker Hub: tag & latest)
-          sh """
+          sh '''
             set -e
             docker tag ${ECR_REPO}:${IMG_TAG} ${ECR_REPO}:latest
             docker tag ${ECR_REPO}:${IMG_TAG} docker.io/${DOCKERHUB_REPO}:${IMG_TAG}
             docker tag ${ECR_REPO}:${IMG_TAG} docker.io/${DOCKERHUB_REPO}:latest
-          """
+          '''
 
           // ECR 푸시
-          sh """
+          sh '''
             set -e
             docker push ${ECR_REPO}:${IMG_TAG}
             docker push ${ECR_REPO}:latest
-          """
+          '''
 
           // Docker Hub 푸시
           withCredentials([usernamePassword(credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PAT')]) {
-            sh """
+            sh '''
               set -e
-              echo "\$DH_PAT" | docker login -u "\$DH_USER" --password-stdin docker.io
+              echo "$DH_PAT" | docker login -u "$DH_USER" --password-stdin docker.io
               docker push docker.io/${DOCKERHUB_REPO}:${IMG_TAG}
               docker push docker.io/${DOCKERHUB_REPO}:latest
               docker logout docker.io || true
-            """
+            '''
           }
         }
       }
@@ -118,10 +118,12 @@ pipeline {
       when { expression { env.SKIP_BUILD != "true" } }
       steps {
         withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-          sh """
+          sh '''
             set -e
             git config --global --add safe.directory "${WORKSPACE}" || true
-            sed -ri "s#(image:\\s*${ECR_REPO}:).*#\\1${IMG_TAG}#g" manifests/frontend-deployment.yaml
+
+            # image: <ECR_REPO>:<old>  →  image: <ECR_REPO>:${IMG_TAG}
+            sed -ri "s#(image:[[:space:]]*${ECR_REPO}:).*#\\1${IMG_TAG}#g" manifests/frontend-deployment.yaml
 
             git config user.name  "jenkins-bot"
             git config user.email "jenkins-bot@local"
@@ -133,7 +135,7 @@ pipeline {
 
             git pull --rebase https://${GIT_USER}:${GIT_TOKEN}@github.com/fk36dks/Final-PJ.git ${GIT_BRANCH} || true
             git push https://${GIT_USER}:${GIT_TOKEN}@github.com/fk36dks/Final-PJ.git ${GIT_BRANCH}
-          """
+          '''
         }
       }
     }

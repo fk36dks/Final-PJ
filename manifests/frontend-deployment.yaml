@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:<NEW_TAG>
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:55
           imagePullPolicy: Always
           ports:
             - containerPort: 80

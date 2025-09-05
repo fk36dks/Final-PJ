@@ -5,6 +5,11 @@ require("dotenv").config();
 const app = express();
 const port = 8080;
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
 app.get("/", (req, res) => {
   res.send("Backend API is running 🚀");
 });

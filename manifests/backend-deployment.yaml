@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: shop-backend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:latest
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:60
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000

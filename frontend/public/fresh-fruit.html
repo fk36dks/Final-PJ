@@ -11,7 +11,7 @@
 .actions{display:flex;align-items:center;gap:10px}.step{display:flex;align-items:center;gap:6px}
 .step button{width:28px;height:28px;border-radius:50%;border:1px solid var(--bd);background:#fff;cursor:pointer}.qty{min-width:20px;text-align:center}
 .cart{border:1px solid var(--bd);background:var(--pill);height:36px;padding:0 12px;border-radius:10px;cursor:pointer}.cart:hover{background:#efeaff;border-color:#d9cff7}</style></head><body>
-<header class="top"><div class="bar"><a class="brand" href="main.html">Kolon</a><div class="nav"><a href="cart.html">장바구니 <span id="cartCount" class="badge">0</span></a><a href="mypage.html">마이페이지</a><a href="points.html">포인트</a></div></div></header>
+<header class="top"><div class="bar"><a class="brand" href="index.html">Kolon</a><div class="nav"><a href="cart.html">장바구니 <span id="cartCount" class="badge">0</span></a><a href="mypage.html">마이페이지</a><a href="points.html">포인트</a></div></div></header>
 <main class="wrap"><h1>식품 &gt; 신선식품 &gt; 과일</h1><section id="list" class="list"></section></main>
 <script>
 const CART_KEY='cart',fmt=n=>(n||0).toLocaleString('ko-KR');const getCart=()=>{try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(e){return[]}};const setCart=v=>localStorage.setItem(CART_KEY,JSON.stringify(v));function updateBadge(){document.getElementById('cartCount').textContent=getCart().reduce((s,i)=>s+(+i.qty||0),0)}

@@ -1,9 +1,14 @@
-FROM node:20-alpine
+FROM python:3.11-slim
+
+# Install dependencies
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --omit=dev
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
 COPY . .
-ENV PORT=5000
+
+# Expose port and run application
 EXPOSE 5000
-CMD ["node","server.js"]   # ← npm start 대신 server.js를 직접 실행
+CMD ["python", "app.py"]
 

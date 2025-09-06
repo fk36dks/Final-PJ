@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: shop-backend
   namespace: shop
+  labels:
+    app: shop-backend
 spec:
   replicas: 1
   selector:
@@ -14,27 +16,23 @@ spec:
         app: shop-backend
     spec:
       containers:
-        - name: backend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:56
-          imagePullPolicy: Always
+        - name: shop-backend
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
-          startupProbe:
-            httpGet:
-              path: /health
-              port: 5000
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 30
+          env:
+            - name: PORT
+              value: "5000"
           readinessProbe:
             httpGet:
-              path: /health
+              path: /api/health
               port: 5000
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
             httpGet:
-              path: /health
+              path: /api/health
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10

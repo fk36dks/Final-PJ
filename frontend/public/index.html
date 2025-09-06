@@ -74,11 +74,10 @@
   <div class="container bar" id="topBar">
     <div class="left">
       <button class="icon-btn" id="menuBtn" aria-label="카테고리 열기">≡</button>
-      <a class="brand" href="main.html">Kolon</a>
+      <a class="brand" href="index.html">Kolon</a>
     </div>
     <div class="right">
-      <a class="pill" >로그아웃</a>
-      <!-- 회원가입 버튼 제거 -->
+      <a class="pill">로그아웃</a>
       <a class="pill" href="cart.html">장바구니 <span class="badge" id="cartCount">0</span></a>
       <a class="pill" href="mypage.html">마이페이지</a>
       <a class="pill" href="points.html">포인트</a>
@@ -122,7 +121,6 @@
 
   <!-- 광고 배너 -->
   <section class="banner">
-    <!-- S3 경로 -->
     <img id="bannerImg" src="https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K11.png" alt="광고 배너">
   </section>
 </main>
@@ -133,7 +131,7 @@
   const getCart=()=>{ try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(_){return[]} };
   document.getElementById('cartCount').textContent = getCart().reduce((s,i)=>s+(i.qty||0),0);
 
-  /* 배너 로테이션: K11 → K12 → K13 (모두 S3 절대경로) */
+  /* 배너 로테이션 */
   const imgs=[
     'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K11.png',
     'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K12.png',

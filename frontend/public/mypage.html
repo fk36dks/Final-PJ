@@ -55,11 +55,9 @@
   <header class="topbar">
     <div class="bar">
       <div class="left">
-        <a class="brand" href="main.html">Kolon</a>
+        <a class="brand" href="index.html">Kolon</a>
       </div>
       <div class="right">
-        <a class="pill" >로그아웃</a>
-        <!-- 회원가입 버튼 삭제 -->
         <a class="pill" href="cart.html">장바구니</a>
         <a class="pill" href="mypage.html">마이페이지</a>
         <a class="pill" href="points.html">포인트</a>
@@ -69,7 +67,7 @@
 
   <main class="container">
     <div class="page-head">
-      <a class="ico-back" href="main.html" id="backBtn" aria-label="뒤로가기">←</a>
+      <a class="ico-back" href="index.html" id="backBtn" aria-label="뒤로가기">←</a>
       <span>마이페이지</span>
     </div>
     <h1 class="page-title">마이</h1>
@@ -86,6 +84,7 @@
     <!-- 메뉴 리스트 -->
     <section class="card">
       <div class="list">
+        <!-- ✅ 주문내역: orders.html 로 이동 -->
         <a class="row" href="orders.html">
           <div class="label">
             <div>주문내역</div>
@@ -122,13 +121,15 @@
   </main>
 
   <script>
-    /* 이름을 항상 '사용자'로 고정 */
+    // 회원 이름 로드 (signup.html에서 저장한 mockUser 사용)
     (function(){
-      const el = document.getElementById('userName');
-      if(el) el.textContent = '사용자';
+      try{
+        const u = JSON.parse(localStorage.getItem('mockUser')||'{}');
+        if(u.name) document.getElementById('userName').textContent = u.name;
+      }catch(e){}
     })();
 
-    /* 뒤로가기(같은 출처면 back, 아니면 main) - 기존 동작 유지 */
+    // 뒤로가기(같은 출처면 back, 아니면 main)
     (function () {
       const back = document.getElementById('backBtn');
       if (!back) return;

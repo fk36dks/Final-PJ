@@ -12,7 +12,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background-color: #F5F5F5;
+            background-color: #f5f5f5;
             color: #333;
             line-height: 1.6;
         }
@@ -52,7 +52,7 @@
         }
         .user-avatar {
             font-size: 32px;
-            background: #F0F0F0;
+            background: #f0f0f0;
             padding: 15px;
             border-radius: 50%;
         }
@@ -105,7 +105,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 0;
-            border-bottom: 1px solid #F0F0F0;
+            border-bottom: 1px solid #f0f0f0;
         }
         .transaction-item:last-child {
             border-bottom: none;
@@ -147,7 +147,7 @@
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid #F3F3F3;
+            border: 4px solid #f3f3f3;
             border-top: 4px solid #007AFF;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -180,6 +180,7 @@
         <button class="back-btn" onclick="goBack()">←</button>
         <h1>포인트</h1>
     </div>
+
     <div class="container">
         <div class="user-info" id="user-info">
             <div class="user-avatar">👤</div>
@@ -188,13 +189,21 @@
                 <p>내 계정 관리</p>
             </div>
         </div>
-        <div class="points-card">
+
+        <div class="points-card" style="position: relative;">
             <h3>잔여 포인트</h3>
             <div class="points-amount" id="points-amount">0 P</div>
-            <div class="points-note">※ 포인트는 RDS에서 관리됩니다</div>
+            <div class="points-note">※ 포인트</div>
+            <!-- 시연용 히든 충전 버튼 -->
+            <button id="hiddenChargeBtn" 
+                    style="position:absolute; bottom:8px; right:8px; width:16px; height:16px; 
+                           background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); 
+                           color:rgba(255,255,255,0.4); font-size:10px; cursor:pointer; border-radius:3px;" 
+                    title="시연용 포인트 충전">+</button>
         </div>
+
         <div class="transactions-section">
-            <h3 class="section-title">포인트 내역</h3>
+            <h3 class="section-title">포인트 </h3>
             <div id="loading-spinner" class="loading-spinner" style="display: none;">
                 <div class="spinner"></div>
             </div>
@@ -205,50 +214,104 @@
             <div id="transactions-list"></div>
         </div>
     </div>
+
     <script>
         let currentUser = null;
-        document.addEventListener('DOMContentLoaded', function() {
-            checkUserSession();
-            loadUserPoints();
-        });
-            currentUser = {
-                id: userId,
-                name: userName,
-                token: token
-            };
-            // Update user info in UI
-            document.getElementById('user-name').textContent = userName || '사용자';
+
+        // 시연용 포인트 충전 함수 추가
+        async function addDemoPoints() {
+            try {
+                const response = await fetch('/api/demo/points/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`포인트 충전 완료!\n충전 금액: ${data.added_amount.toLocaleString()}P\n새 잔액: ${data.new_balance.toLocaleString()}P`);
+                    loadUserPoints(); // 포인트 다시 로드
+                } else {
+                    alert('포인트 충전 실패: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Add points failed:', error);
+                alert('포인트 충전 중 오류가 발생했습니다.');
+            }
         }
+
+        // 시연용 데모 사용자 설정
+        currentUser = {
+            id: 'demo',
+            name: '사용자',
+            token: 'demo-token'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 시연용: 로그인 체크 생략
+            // checkUserSession();
+            loadUserPoints();
+            
+            // 히든 충전 버튼 이벤트 연결
+            setTimeout(() => {
+                const hiddenBtn = document.getElementById('hiddenChargeBtn');
+                if (hiddenBtn) {
+                    hiddenBtn.addEventListener('click', addDemoPoints);
+                }
+            }, 1000);
+        });
+
         async function loadUserPoints() {
-            if (!currentUser) return;
+            // 시연용: currentUser 체크 제거 - 항상 RDS 포인트 조회
+            // if (!currentUser) return;
+
             const loadingSpinner = document.getElementById('loading-spinner');
             const errorContainer = document.getElementById('error-container');
             const transactionsList = document.getElementById('transactions-list');
             const pointsAmount = document.getElementById('points-amount');
+
             try {
-                // Show loading state
                 loadingSpinner.style.display = 'flex';
                 errorContainer.style.display = 'none';
                 transactionsList.innerHTML = '';
-                // Fetch user points and transactions
-                const response = await fetch(`/api/account/points?user_id=${currentUser.id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${currentUser.token}`,
-                        'Content-Type': 'application/json'
+
+                // RDS에서 포인트 조회
+                const pointsResponse = await fetch('/api/demo/points');
+                const pointsData = await pointsResponse.json();
+                
+                if (pointsResponse.ok) {
+                    // 포인트 표시 업데이트
+                    pointsAmount.textContent = `${pointsData.points_balance.toLocaleString()} P`;
+                    
+                    // 사용자 이름 설정
+                    document.getElementById('user-name').textContent = '사용자';
+                } else {
+                    console.error('포인트 조회 실패:', pointsData);
+                    pointsAmount.textContent = '0 P';
+                    document.getElementById('user-name').textContent = '사용자';
+                }
+
+                // 기존 트랜잭션 API 호출 (있다면 유지, 없으면 빈 배열)
+                try {
+                    const response = await fetch(`/api/account/points?user_id=${currentUser.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${currentUser.token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        renderTransactions(data.transactions || []);
+                    } else {
+                        renderTransactions([]);
                     }
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || '포인트 정보를 불러오는데 실패했습니다.');
+                } catch (transError) {
+                    console.log('트랜잭션 조회 실패 (정상):', transError);
+                    renderTransactions([]);
                 }
-                // Update points display
-                pointsAmount.textContent = `${data.points.toLocaleString()} P`;
-                // Update user name if available
-                if (data.user_name) {
-                    document.getElementById('user-name').textContent = data.user_name;
-                }
-                // Render transactions
-                renderTransactions(data.transactions || []);
+
             } catch (error) {
                 console.error('Error loading points:', error);
                 showError(error.message);
@@ -256,17 +319,19 @@
                 loadingSpinner.style.display = 'none';
             }
         }
+
         function renderTransactions(transactions) {
             const transactionsList = document.getElementById('transactions-list');
+
             if (transactions.length === 0) {
                 transactionsList.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">:메모:</div>
-                        <p>아직 포인트 내역이 없습니다.</p>
+                        <div class="empty-state-icon">📝</div>
                     </div>
                 `;
                 return;
             }
+
             const transactionsHtml = transactions.map(transaction => {
                 const date = new Date(transaction.created_at).toLocaleDateString('ko-KR', {
                     year: 'numeric',
@@ -275,10 +340,12 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+
                 const amountClass = transaction.delta > 0 ? 'positive' : 'negative';
-                const amountText = transaction.delta > 0 ?
-                    `+${transaction.delta.toLocaleString()}P` :
+                const amountText = transaction.delta > 0 ? 
+                    `+${transaction.delta.toLocaleString()}P` : 
                     `${transaction.delta.toLocaleString()}P`;
+
                 return `
                     <div class="transaction-item">
                         <div class="transaction-info">
@@ -292,21 +359,26 @@
                     </div>
                 `;
             }).join('');
+
             transactionsList.innerHTML = transactionsHtml;
         }
+
         function showError(message) {
             const errorContainer = document.getElementById('error-container');
             const errorMessage = document.getElementById('error-message');
+            
             errorMessage.textContent = message;
             errorContainer.style.display = 'block';
         }
+
         function goBack() {
             if (document.referrer) {
                 window.history.back();
             } else {
-                window.location.href = '/main.html';
+                window.location.href = '/index.html';
             }
         }
+
         // Auto-refresh points every 30 seconds
         setInterval(() => {
             if (currentUser && document.visibilityState === 'visible') {

@@ -60,15 +60,13 @@
   <div class="bar">
     <div class="left">
       <!-- 메인으로 배너 삭제, Kolon은 메인으로 링크 -->
-      <a class="brand" href="main.html">Kolon</a>
+      <a class="brand" href="index.html">Kolon</a>
     </div>
     <div class="right">
-      <a class="pill" >로그아웃</a>
-      <!-- 회원가입 버튼 제거 -->
       <a class="pill" href="cart.html" id="toCart">장바구니 <span class="badge" id="cartCount">0</span></a>
       <a class="pill" href="mypage.html">마이페이지</a>
-      <!-- 우측 끝 포인트 배너 -->
-      <a class="pill" href="points.html" id="pointsLink">포인트</a>
+      <!-- 우측 끝 포인트 배너 추가 -->
+      <a class="pill" href="points.html" >포인트</a>
     </div>
   </div>
 </header>
@@ -88,7 +86,7 @@
   </div>
 
   <div class="page-head">
-    <a class="ico-back" href="main.html" aria-label="뒤로가기">←</a>
+    <a class="ico-back" href="index.html" aria-label="뒤로가기">←</a>
     <span id="resultTitle">검색 결과</span>
   </div>
 
@@ -108,9 +106,10 @@
   const updateBadge=()=>{ const n=getCart().reduce((s,i)=>s+(i.qty||0),0); const b=document.getElementById('cartCount'); if(b) b.textContent=n; };
   updateBadge();
 
-  /* 포인트 배너: 0P 고정 표시 */
+  /* 포인트 배너(선택): 현재 포인트가 있으면 텍스트에 표시 */
+  const points = Number(localStorage.getItem('points')||0);
   const pLink = document.getElementById('pointsLink');
-  if (pLink) pLink.textContent = '포인트 0P';
+  if (pLink && points>0) pLink.textContent = `포인트 ${points.toLocaleString('ko-KR')}P`;
 
   /* 검색 파라미터로 타이틀 표시 */
   const params = new URLSearchParams(location.search);
@@ -130,7 +129,7 @@
   searchForm.addEventListener('submit',submitSearch);
   searchBtn.addEventListener('click',submitSearch);
 
-  /* 데모 데이터 (이미지 경로는 S3 절대경로) */
+  /* 데모 데이터 */
   const data=[
     {id:'h4',name:'후드티4',price:43000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie4.jpg'},
     {id:'h3',name:'후드티2',price:25000,img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie3.jpg'},

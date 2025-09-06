@@ -40,7 +40,7 @@
   /* 포인트 */
   .point-area{display:grid;grid-template-columns:1fr 140px; gap:12px;align-items:center}
   .point-input{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;text-align:right}
-  .point-input::-webkit-outer spin-button,.point-input::-webkit-inner-spin-button{appearance:none;margin:0}
+  .point-input::-webkit-outer-spin-button,.point-input::-webkit-inner-spin-button{appearance:none;margin:0}
   .btn-ghost{all:unset;cursor:pointer;text-align:center;border:1px solid var(--border);border-radius:12px;
              padding:12px;background:var(--accent-ghost);}
 
@@ -142,7 +142,7 @@
         </div>
       </div>
       <div class="muted" style="margin-top:8px">
-        사용 가능 : <span id="canUse">0</span>원 | 보유 포인트 : <span id="ownPt">0</span>원
+        결제 금액 : <span id="canUse">0</span>원 | 보유 포인트 : <span id="ownPt">0</span>포인트
       </div>
     </section>
 
@@ -172,8 +172,8 @@
       <h3 id="doneTitle">결제가 완료되었습니다 🎉</h3>
       <p>주문이 정상적으로 접수되었어요. 마이페이지에서 주문내역을 확인할 수 있습니다.</p>
       <div class="actions">
-        <button class="btn" onclick="location.href='mypage.html'">주문내역 보기</button>
-        <button class="btn primary" onclick="location.href='main.html'">메인으로</button>
+        <button class="btn" onclick="location.href='orders.html'">주문내역 보기</button>
+        <button class="btn primary" onclick="location.href='index.html'">메인으로</button>
       </div>
     </div>
   </div>
@@ -184,14 +184,37 @@
   const getCart = () => { try{return JSON.parse(localStorage.getItem('cart'))||[]}catch(e){return[]} };
 
   /* ===== 초기 데이터 ===== */
-  const ownPoints = Number(localStorage.getItem('points_balance')) || 35000;   // 보유 포인트(예시)
+  let ownPoints = Number(localStorage.getItem('points_balance')) || 35000;   // 보유 포인트(예시)
   const cart = getCart();
+
+  // RDS에서 포인트 조회 함수 추가
+  async function updateRDSPoints() {
+    try {
+      const response = await fetch('/api/demo/points');
+      const data = await response.json();
+      
+      if (response.ok) {
+        ownPoints = data.points_balance || 0;
+        document.getElementById('ownPt').textContent = fmt(ownPoints);
+        document.getElementById('canUse').textContent = fmt(Math.min(total, ownPoints));
+        return ownPoints;
+      }
+    } catch (error) {
+      console.error('RDS 포인트 조회 실패:', error);
+    }
+    return ownPoints;
+  }
+
+  // 페이지 로드 시 RDS 포인트로 업데이트
+  updateRDSPoints().then(() => {
+    updatePay(); // 포인트 업데이트 후 결제 금액 재계산
+  });
 
   // 합계(장바구니 기반, 없으면 payment_total 사용, 그것도 없으면 0)
   let total = cart.reduce((s,i)=>s + (Number(i.price)||0)*(Number(i.qty)||1), 0);
   if(!total) total = Number(localStorage.getItem('payment_total')) || 0;
 
-  // 주문 패널 채우기 (장바구니와 동일한 이미지 URL을 그대로 사용)
+  // 주문 패널 채우기 + 이미지 보이도록 (요청 3)
   (function fillItem(){
     const imgEl = document.getElementById('firstThumb');
     const nameEl= document.getElementById('firstName');
@@ -203,9 +226,8 @@
     if(cart.length){
       const it = cart[0];
       const qty = Number(it.qty)||1, price = Number(it.price)||0;
-
-      // ★ 이미 저장된 AWS S3 절대경로를 그대로 사용 (cart와 동일 규칙)
-      const imgSrc = it.image || it.img || '';
+      // 다양한 키 이름에 대응
+      const imgSrc = it.image || it.img || it.thumbnail || it.thumb || '';
       imgEl.src = imgSrc || 'data:image/svg+xml;utf8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>'
       );
@@ -217,6 +239,7 @@
       sumEl.textContent  = fmt(price*qty);
       cntEl.textContent  = cart.reduce((s,x)=>s+(Number(x.qty)||1),0);
     }else{
+      // 비어있을 때도 합계/버튼 금액은 표시
       imgEl.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>'
       );
@@ -285,12 +308,91 @@
     btn.innerHTML = '결제 처리중…';
     btn.disabled = true;
 
-    setTimeout(()=>{
-      // 포인트 차감 시뮬레이션
+    setTimeout(async ()=>{
+      // RDS에서 포인트 차감 처리
       const used = clampPoint(pointInput.value);
-      const remain = Math.max(0, (Number(localStorage.getItem('points_balance'))||ownPoints) - used);
-      localStorage.setItem('points_balance', remain.toString());
+      
+      if (used > 0) {
+        try {
+          // RDS에서 포인트 차감 API 호출
+          const response = await fetch('/api/demo/points/deduct', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount: used })
+          });
+          
+          if (response.ok) {
+            console.log(`포인트 ${used}원 차감 완료`);
+          } else {
+            console.error('포인트 차감 실패');
+          }
+        } catch (error) {
+          console.error('포인트 차감 API 오류:', error);
+          // 실패 시 localStorage로 폴백
+          const remain = Math.max(0, (Number(localStorage.getItem('points_balance'))||ownPoints) - used);
+          localStorage.setItem('points_balance', remain.toString());
+        }
+      }
 
+      // ✅ 디버깅: 장바구니 상태 확인
+      console.log('결제 시 장바구니 상태:', cart);
+      console.log('장바구니 길이:', cart.length);
+      console.log('결제 총액:', total);
+
+      // ✅ 임시 주문 생성 (30초 후 자동 삭제)
+      const orders = JSON.parse(localStorage.getItem('orders')||'[]');
+      const orderId = 'OD' + Date.now();
+      const items = cart.length ? cart.map(i=>({
+        name: i.name,
+        qty: Number(i.qty)||1,
+        price: Number(i.price)||0,
+        image: i.image||i.img||i.thumbnail||i.thumb||''
+      })) : [{
+        name: document.getElementById('firstName').textContent || '상품',
+        qty: Number(document.getElementById('firstQty').textContent)||1,
+        price: Number((document.getElementById('firstPrice').textContent||'0').replace(/[^0-9]/g,''))||0,
+        image: document.getElementById('firstThumb')?.src || ''
+      }];
+
+      const receiver = {
+        name: document.getElementById('recvName').innerText.trim(),
+        phone: document.getElementById('recvPhone').innerText.trim(),
+        addr: document.getElementById('recvAddr').innerText.trim()
+      };
+
+      const tempOrder = {
+        id: orderId,
+        date: new Date().toISOString(),
+        items: items,
+        subtotal: items.reduce((s,x)=>s+x.price*x.qty,0),
+        pointsUsed: used,
+        total: Math.max(0, total - used),
+        status: '결제완료',
+        receiver: receiver,
+        isTemp: true, // 임시 주문 표시
+        expireAt: Date.now() + 30000 // 30초 후 만료 시간
+      };
+
+      orders.unshift(tempOrder);
+      localStorage.setItem('orders', JSON.stringify(orders));
+      
+      // ✅ 디버깅: 주문 저장 확인
+      console.log('주문 저장 완료:', tempOrder);
+      console.log('전체 주문 목록:', orders);
+
+      // 30초 후 임시 주문 삭제
+      setTimeout(() => {
+        const currentOrders = JSON.parse(localStorage.getItem('orders')||'[]');
+        const filteredOrders = currentOrders.filter(o => o.id !== orderId);
+        localStorage.setItem('orders', JSON.stringify(filteredOrders));
+        console.log('임시 주문이 삭제되었습니다:', orderId);
+      }, 30000);
+
+      // ✅ 결제 완료 후 장바구니 초기화
+      localStorage.removeItem('cart');
+      
       btn.disabled = false;
       btn.innerHTML = old;
       modal.classList.add('show');

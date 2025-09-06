@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>주문내역</title>
 <style>
   :root{
@@ -27,6 +27,10 @@
   .chip{all:unset;border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}
   .chip.active{background:var(--chip);border-color:#d9cff7;color:#3d2fb1;font-weight:700}
 
+  /* Clear button - 시연용 */
+  .clear-btn{background:#ff4444;color:white;border:none;padding:8px 12px;border-radius:999px;cursor:pointer;font-size:12px;margin-left:auto}
+  .clear-btn:hover{background:#cc0000}
+
   /* Order card */
   .card{
     background:var(--card);border:1px solid var(--border);border-radius:14px;
@@ -42,11 +46,18 @@
   .name{font-weight:700}
   .sum{margin-top:10px;display:flex;justify-content:flex-end;gap:18px;color:#433c55}
   .sum b{font-size:16px}
-  /* 상세 섹션은 사용하지 않으니 스타일 유지해도 돼요(DOM에 추가하지 않음) */
+  .status{margin-left:8px;font-weight:700;color:#3d2fb1}
   .detail{margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;display:none}
   .detail.show{display:block}
   .row{display:flex;justify-content:space-between;padding:4px 0}
   .empty{padding:40px 20px;text-align:center;color:#6c6780;border:1px dashed var(--border);border-radius:14px;background:#fff}
+
+  /* Bottom bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(250,249,251,.92);border-top:1px solid var(--border)}
+  .bar-inner{max-width:980px;margin:0 auto;padding:10px 16px;display:flex;gap:10px;justify-content:space-between;align-items:center}
+  .primary{all:unset;cursor:pointer;background:linear-gradient(0deg,#6b47d6,#7a5cf0);color:#fff;border:1px solid #d9cff7;
+           padding:12px 16px;border-radius:12px;box-shadow:0 12px 24px rgba(107,71,214,.28)}
+  .link{color:#3d2fb1;text-decoration:none}
 </style>
 </head>
 <body>
@@ -55,7 +66,7 @@
       <button class="back" onclick="history.back()">← 이전</button>
       <h1>주문내역</h1>
       <div class="nav">
-        <a class="pill" href="main.html">메인</a>
+        <a class="pill" href="index.html">메인</a>
         <a class="pill" href="cart.html">장바구니</a>
         <a class="pill" href="mypage.html">마이페이지</a>
       </div>
@@ -67,62 +78,62 @@
       <button class="chip" data-filter="배송준비중">배송준비중</button>
       <button class="chip" data-filter="배송중">배송중</button>
       <button class="chip" data-filter="배송완료">배송완료</button>
+      <!-- 시연용 초기화 버튼 -->
+      
     </div>
 
     <div id="list"></div>
 
     <div id="empty" class="empty" style="display:none">
       주문 내역이 없습니다.<br/>
-      <a class="pill" href="main.html" style="margin-top:10px;display:inline-flex">메인으로 이동</a>
+      <a class="link" href="index.html">메인으로 이동</a> 후 상품을 담아 결제해보세요.
     </div>
   </div>
 
-  <!-- 하단 '쇼핑 계속하기' 바는 요청에 따라 삭제했습니다 -->
+  <div class="bar">
+    <div class="bar-inner">
+      <div class="meta">최근 주문은 상단에 표시돼요. 주문번호를 눌러 복사할 수 있습니다.</div>
+      <a class="primary" href="index.html">쇼핑 계속하기</a>
+    </div>
+  </div>
 
 <script>
-/* ---------- 공통 ---------- */
-const S3_BASE = 'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/';
+/* ---------- 데이터 접근 유틸 ---------- */
 const fmt = n => (n||0).toLocaleString('ko-KR');
-function readOrders(){
-  try { return JSON.parse(localStorage.getItem('orders'))||[]; }
-  catch(e){ return []; }
-}
-function readCart(){
-  try { return JSON.parse(localStorage.getItem('cart'))||[]; }
-  catch(e){ return []; }
-}
-const s3 = (raw) => {
-  if(!raw) return '';
-  return raw.startsWith('http') ? raw : (S3_BASE + raw.split('/').pop());
-};
 
-/* ---------- 결제 직후 동기화: 장바구니 → 주문내역 ---------- */
-(function ensureRecentOrderFromCart(){
-  const cart = readCart();
-  if(!cart.length) return;
-
-  const items = cart.map(i => ({
-    name: i.name, qty: Number(i.qty)||1, price: Number(i.price)||0,
-    image: s3(i.image || i.img || i.thumbnail || i.thumb || '')
-  }));
-  const sig = JSON.stringify(items.map(x => [x.name, x.qty, x.price, x.image]));
-  if(localStorage.getItem('last_order_sig') === sig) return;
-
-  const orders = readOrders();
-  const subtotal = items.reduce((s,x)=>s+x.price*x.qty,0);
-  orders.unshift({
-    id: 'OD' + Date.now(),
-    date: new Date().toISOString(),
-    items,
-    subtotal,
-    pointsUsed: 0,
-    total: subtotal,
-    status: '결제완료'
-    // 배송지/메모 정보는 요청에 따라 표시하지 않습니다.
+// ✅ 만료된 임시 주문 정리 함수
+function cleanExpiredOrders() {
+  const orders = JSON.parse(localStorage.getItem('orders')||'[]');
+  const now = Date.now();
+  const validOrders = orders.filter(order => {
+    if (order.isTemp && order.expireAt && now > order.expireAt) {
+      console.log('만료된 임시 주문 삭제:', order.id);
+      return false;
+    }
+    return true;
   });
-  localStorage.setItem('orders', JSON.stringify(orders));
-  localStorage.setItem('last_order_sig', sig);
-})();
+  
+  if (validOrders.length !== orders.length) {
+    localStorage.setItem('orders', JSON.stringify(validOrders));
+  }
+  
+  return validOrders;
+}
+
+function readOrders(){
+  try { return cleanExpiredOrders(); } // ✅ 만료된 주문 자동 정리
+  catch(e){ return []; }
+}
+
+// ✅ 시연용 전체 주문내역 초기화 함수
+function clearAllOrders() {
+  if (confirm('모든 주문내역을 삭제하시겠습니까?\n(시연용 기능)')) {
+    localStorage.removeItem('orders');
+    ORDERS = [];
+    render('결제완료', true);
+    console.log('모든 주문내역이 삭제되었습니다.');
+  }
+}
 
 /* ---------- 렌더링 ---------- */
 const listEl = document.getElementById('list');
@@ -131,7 +142,7 @@ let ORDERS = readOrders();
 
 /**
  * @param {string} filter - 'all' | '결제완료' | '배송준비중' | '배송중' | '배송완료'
- * @param {boolean} autoExpand - true면 상세 자동 펼침
+ * @param {boolean} autoExpand - true면 상세(상품정보+개인정보) 자동 펼침
  */
 function render(filter='all', autoExpand=false){
   listEl.innerHTML = '';
@@ -164,11 +175,10 @@ function render(filter='all', autoExpand=false){
     (o.items||[]).forEach(it=>{
       const row = document.createElement('div');
       row.className='it';
-
       const img = document.createElement('img');
       img.className='thumb';
-      const raw = it.image || it.img || it.thumbnail || it.thumb || '';
-      img.src = raw ? s3(raw) : 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>');
+      img.src = it.image || it.img || it.thumbnail || it.thumb ||
+        'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>');
       img.alt = (it.name||'상품')+' 이미지';
       row.appendChild(img);
 
@@ -190,28 +200,37 @@ function render(filter='all', autoExpand=false){
     sum.innerHTML = `<div>포인트 사용 <b>- ${fmt(o.pointsUsed||0)}</b>원</div>
                      <div>결제 금액 <b>${fmt(o.total||0)}</b>원</div>`;
 
-    /* ▼ 요청에 따라 배송지/메모 상세는 표시하지 않음(섹션 생성은 하되 DOM에 추가하지 않음) */
     const detail = document.createElement('div');
     detail.className='detail';
+    detail.innerHTML = `
+      <div class="row"><span>수령인</span><span>${o.receiver?.name||'-'}</span></div>
+      <div class="row"><span>연락처</span><span>${o.receiver?.phone||'-'}</span></div>
+      <div class="row"><span>주소</span><span>${o.receiver?.addr||'-'}</span></div>
+      <div class="row"><span>주문메모</span><span>${o.memo||'-'}</span></div>
+    `;
 
+    // 토글 버튼
     toggle.addEventListener('click',()=>{
-      const opened = detail.classList.toggle('show'); // DOM에 없어도 오류 없음
+      const opened = detail.classList.toggle('show');
       toggle.textContent = opened ? '접기' : '상세';
     });
 
+    // 주문번호 클릭 → 복사
     title.querySelector('.order-id').addEventListener('click',async (e)=>{
-      try{ await navigator.clipboard.writeText(o.id); e.target.innerText=o.id+'(복사됨)'; setTimeout(()=>e.target.innerText=o.id,900);}catch(_){}
+      try{ await navigator.clipboard.writeText(o.id); e.target.innerText=o.id+'(복사됨)'; setTimeout(()=>e.target.innerText=o.id,900);}
+      catch(_){}
     });
 
     card.appendChild(head);
     card.appendChild(items);
     card.appendChild(sum);
-    /* detail 은 append 하지 않습니다. */
+    card.appendChild(detail);
     listEl.appendChild(card);
 
+    // 결제완료 탭에서 자동으로 상세 펼치기
     if(autoExpand){
-      // 상세 자동 펼침 요청이 와도 표시 영역이 없으니 버튼 텍스트만 동기화
-      toggle.textContent = '상세';
+      detail.classList.add('show');
+      toggle.textContent = '접기';
     }
   });
 }
@@ -222,12 +241,24 @@ document.querySelectorAll('.chip').forEach(ch=>{
     document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
     ch.classList.add('active');
     const f = ch.dataset.filter;
-    render(f, f==='결제완료');
+    render(f, f==='결제완료'); // ✅ 결제완료 버튼 클릭 시 상세 자동 펼침
   });
 });
 
-/* ---------- 첫 렌더 ---------- */
+/* ---------- 첫 렌더: 결제완료 탭을 기본으로, 상세 자동 펼침 ---------- */
 render('결제완료', true);
+
+/* ---------- ✅ 주기적으로 만료된 임시 주문 정리 ---------- */
+// 5초마다 만료된 주문 확인 및 재렌더링
+setInterval(() => {
+  const currentOrdersCount = ORDERS.length;
+  ORDERS = readOrders(); // 만료된 주문 자동 정리
+  if (currentOrdersCount !== ORDERS.length) {
+    // 주문이 삭제된 경우 재렌더링
+    const activeFilter = document.querySelector('.chip.active')?.dataset.filter || '결제완료';
+    render(activeFilter, activeFilter === '결제완료');
+  }
+}, 5000);
 </script>
 </body>
 </html>

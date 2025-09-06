@@ -33,7 +33,7 @@ h1{margin:6px 0 14px;font-size:20px}
 <body>
 <header class="top">
   <div class="bar">
-    <a class="brand" href="main.html">Kolon</a>
+    <a class="brand" href="index.html">Kolon</a>
     <div class="nav">
       <a href="cart.html">장바구니 <span id="cartCount" class="badge">0</span></a>
       <a href="mypage.html">마이페이지</a>
@@ -58,15 +58,14 @@ function updateBadge(){
 
 // 기본 품목 + 추가 후디 이미지
 function data(){
-  const BASE = 'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/';
   const a=[];
   for(let i=1;i<=6;i++){
-    a.push({img:`${BASE}W${i}.jpg`, name:`여성 상의 ${i}`, price: 19000 + (i%6)*4000});
+    a.push({img:`https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/W${i}.jpg`, name:`여성 상의 ${i}`, price: 19000 + (i%6)*4000});
   }
   // 요청 추가: Hoodie4/5/6
-  a.push({img:`${BASE}Hoodie4.jpg`, name:'여성 후드티 4', price: 27500});
-  a.push({img:`${BASE}Hoodie5.jpg`, name:'여성 후드티 5', price: 28900});
-  a.push({img:`${BASE}Hoodie6.jpg`, name:'여성 후드티 6', price: 30500});
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie4.jpg', name:'여성 후드티 4', price: 27500});
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie5.jpg', name:'여성 후드티 5', price: 28900});
+  a.push({img:'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/Hoodie6.jpg', name:'여성 후드티 6', price: 30500});
   return a;
 }
 

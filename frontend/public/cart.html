@@ -52,11 +52,9 @@
   <header class="topbar">
     <div class="bar">
       <div class="left">
-        <a class="brand" href="main.html">Kolon</a>
+        <a class="brand" href="index.html">Kolon</a>
       </div>
       <div class="right">
-        <a class="pill" >로그아웃</a>
-        <!-- 회원가입 버튼 삭제 -->
         <a class="pill" href="mypage.html">마이페이지</a>
         <a class="pill" href="points.html">포인트</a>
       </div>
@@ -93,7 +91,7 @@
   const setCart = (items) => { localStorage.setItem(CART_KEY, JSON.stringify(items)); };
   const getPoints = () => Number(localStorage.getItem(POINT_KEY) ?? 100000);
 
-  function render(){
+  async function render(){
     const listEl = document.getElementById('cartList');
     const emptyEl = document.getElementById('emptyBox');
     const totalEl = document.getElementById('totalPrice');
@@ -117,7 +115,7 @@
       row.className = 'item';
       row.innerHTML = `
         <div class="row">
-          <div class="thumb"><img src="${it.image || it.img}" alt="${it.name}"></div>
+          <div class="thumb"><img src="${it.image || it.img || it.thumbnail || it.thumb || ''}" alt="${it.name}"></div>
           <div>
             <div class="name">${it.name}</div>
             <div class="muted">${fmt(it.price)} / 개</div>
@@ -134,8 +132,19 @@
     });
 
     totalEl.textContent = fmt(total);
-    const p = getPoints();
-    hintEl.textContent = '잔여 포인트: ' + Number(p).toLocaleString('ko-KR') + 'P';
+    
+    // RDS에서 포인트 조회로 변경
+    try {
+      const response = await fetch('/api/demo/points');
+      const data = await response.json();
+      const rdsPoints = data.points_balance || 0;
+      hintEl.textContent = '잔여 포인트: ' + Number(rdsPoints).toLocaleString('ko-KR') + 'P';
+    } catch (error) {
+      console.error('RDS 포인트 조회 실패:', error);
+      // 실패 시 기존 로직 유지
+      const p = getPoints();
+      hintEl.textContent = '잔여 포인트: ' + Number(p).toLocaleString('ko-KR') + 'P';
+    }
   }
 
   document.getElementById('cartList').addEventListener('click', (e)=>{
@@ -154,14 +163,27 @@
     }
   });
 
-  // ✅ 자연스러운 로딩 후 결제 페이지로 이동
-  document.getElementById('checkoutBtn').addEventListener('click', ()=>{
+  // ✅ 자연스러운 로딩 후 결제 페이지로 이동 (RDS 포인트 확인)
+  document.getElementById('checkoutBtn').addEventListener('click', async ()=>{
     const cart = getCart();
     const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const points = getPoints();
+    
     if(total===0){ alert('장바구니가 비었습니다.'); return; }
-    if(points < total){
-      alert('포인트가 부족합니다. 포인트를 충전하거나 수량을 줄여주세요.');
+
+    // RDS에서 실시간 포인트 확인
+    let rdsPoints = 0;
+    try {
+      const response = await fetch('/api/demo/points');
+      const data = await response.json();
+      rdsPoints = data.points_balance || 0;
+    } catch (error) {
+      console.error('RDS 포인트 조회 실패:', error);
+      // 실패 시 localStorage 포인트 사용
+      rdsPoints = getPoints();
+    }
+
+    if(rdsPoints < total){
+      alert(`포인트가 부족합니다.\n필요 포인트: ${total.toLocaleString()}원\n보유 포인트: ${rdsPoints.toLocaleString()}P\n\n포인트를 충전하거나 수량을 줄여주세요.`);
       return;
     }
 
@@ -171,9 +193,8 @@
     btn.disabled = true; btn.textContent = '결제 준비 중...';
     loader.classList.add('show');
 
-    // (기존 로직 유지) 포인트 차감 후 결제 페이지로 이동
+    // 결제 페이지로 이동 (포인트 차감은 payment.html에서 처리)
     setTimeout(()=>{
-      localStorage.setItem(POINT_KEY, String(points - total));
       location.href = 'payment.html?amount=' + total;
     }, 800); // 로딩 연출 시간
   });

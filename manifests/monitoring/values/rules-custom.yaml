@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: custom-rules
+  namespace: monitoring
+spec:
+  groups:
+  - name: k3s-ec2.rules
+    rules:
+    - alert: HighNodeCPUWarning
+      expr: (100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)) > 60
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Node CPU > 60% (5m)"
+        description: "Instance {{ $labels.instance }} CPU usage is above 60% for 5 minutes."
+
+    - alert: HighNodeCPUCritical
+      expr: (100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)) > 80
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Node CPU > 80% (5m)"
+        description: "Instance {{ $labels.instance }} CPU usage is above 80% for 5 minutes."
+

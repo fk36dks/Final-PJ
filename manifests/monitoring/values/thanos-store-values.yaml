@@ -1,0 +1,47 @@
+# thanos-store-values.yaml (추가/수정)
+serviceAccount:
+  create: false
+  name: obs-sa
+
+existingObjstoreSecret: thanos-objstore
+existingObjstoreSecretItems:
+  - key: objstore.yml
+    path: objstore.yml
+
+storegateway:
+  enabled: true
+  serviceAccount:
+    create: false
+    name: obs-sa
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: gp3
+
+
+# serviceAccount:
+#   create: false
+#   name: obs-sa
+#
+# existingObjstoreSecret: thanos-objstore
+# existingObjstoreSecretItems:
+#   - key: objstore.yml
+#     path: objstore.yml
+#
+# storegateway:
+#   enabled: true
+#   persistence:
+#     enabled: true
+#     size: 10Gi
+#     storageClass: gp3     # ← EKS
+#
+# queryFrontend:
+#   enabled: false
+#
+# query: { enabled: false }
+# bucketweb: { enabled: false }
+# compactor: { enabled: false }
+# ruler: { enabled: false }
+# receive: { enabled: false }
+
+

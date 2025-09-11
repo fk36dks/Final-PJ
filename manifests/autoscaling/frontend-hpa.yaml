@@ -14,8 +14,8 @@ spec:
   metrics:
     - type: Resource
       resource:
-        name: cpu
+        name: memory
         target:
-          type: Utilization
-          averageUtilization: 60
+          type: AverageValue
+          averageValue: 200Mi
 

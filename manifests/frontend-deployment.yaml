@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: shop-frontend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:65
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:79
           imagePullPolicy: Always          # 같은 태그라도 새 이미지 당겨오기
           ports:
             - containerPort: 80

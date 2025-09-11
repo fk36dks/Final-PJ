@@ -2,10 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: shop-frontend
   namespace: shop
   labels:
-    app: frontend
+    app: shop-frontend
 spec:
   # ✅ 롤링 중 가용성 보장 강화
   strategy:
@@ -18,14 +18,14 @@ spec:
   minReadySeconds: 5        # 새 파드가 Ready로 안정화된 뒤 사용
   selector:
     matchLabels:
-      app: frontend
+      app: shop-frontend
   template:
     metadata:
       labels:
-        app: frontend
+        app: shop-frontend
     spec:
       containers:
-        - name: frontend
+        - name: shop-frontend
           image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:65
           imagePullPolicy: Always          # 같은 태그라도 새 이미지 당겨오기
           ports:

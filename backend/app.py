@@ -16,7 +16,7 @@ import json
 import logging
 import redis
 
-# 테스트 환경용 .env 파일 로드
+# 테스트 환경용 .env 파일 로드1
 from dotenv import load_dotenv
 if os.path.exists('.env.test'):
     load_dotenv('.env.test')

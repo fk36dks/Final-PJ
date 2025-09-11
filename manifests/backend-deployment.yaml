@@ -1,3 +1,4 @@
+# manifests/backend-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,7 +7,15 @@ metadata:
   labels:
     app: shop-backend
 spec:
-  replicas: 1
+  # ✅ 롤링 중 가용성 보장 강화
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5
   selector:
     matchLabels:
       app: shop-backend
@@ -18,27 +27,35 @@ spec:
       containers:
         - name: shop-backend
           image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-backend:63
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           env:
-            - name: PORT
-              value: "5000"
-            - name: SQLALCHEMY_DATABASE_URI
-              value: "mysql+pymysql://admin:passWord@my-eks-shop-cluster-db.cb0k6umqm9t7.ap-northeast-2.rds.amazonaws.com:3306/shopdb"
-            - name: REDIS_HOST
-              value: "my-eks-shop-cluster-redis.ljxdqv.0001.apn2.cache.amazonaws.com"
-            - name: REDIS_PORT
-              value: "6379"
+            # 필요시 환경변수 추가 (예: RDS/Redis)
+            # - name: DATABASE_URL
+            #   value: ...
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "700m"
+              memory: "512Mi"
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /health
               port: 5000
-            initialDelaySeconds: 2
-            periodSeconds: 5
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /health
               port: 5000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30
+

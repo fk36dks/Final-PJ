@@ -1,3 +1,4 @@
+# manifests/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -6,12 +7,20 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/fk36dks/Final-PJ.git   # 당신 레포로 맞추기
+    repoURL: https://github.com/fk36dks/Final-PJ.git
     targetRevision: main
     path: manifests
+    directory:
+      recurse: true                 # ✅ 하위 디렉토리(manifests/autoscaling 등)까지 재귀 적용
   destination:
     server: https://kubernetes.default.svc
     namespace: shop
+  # ✅ HPA가 변경하는 replicas를 Git과의 차이로 보지 않도록 무시
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
     automated:
       prune: true

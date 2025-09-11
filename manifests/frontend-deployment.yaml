@@ -1,41 +1,57 @@
+# manifests/frontend-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: shop-frontend
+  name: frontend
   namespace: shop
+  labels:
+    app: frontend
 spec:
-  replicas: 1
+  # ✅ 롤링 중 가용성 보장 강화
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  minReadySeconds: 5
-  progressDeadlineSeconds: 300
+      maxUnavailable: 0   # 기존 파드 유지(무중단)
+      maxSurge: 1         # 새 파드 1개씩 추가
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5        # 새 파드가 Ready로 안정화된 뒤 사용
   selector:
     matchLabels:
-      app: shop-frontend
+      app: frontend
   template:
     metadata:
       labels:
-        app: shop-frontend
+        app: frontend
     spec:
       containers:
         - name: frontend
-          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:55
-          imagePullPolicy: Always
+          image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:65
+          imagePullPolicy: Always          # 같은 태그라도 새 이미지 당겨오기
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
           readinessProbe:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: 3
+            initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30    # 커넥션 드레인 시간 확보
 

@@ -8,7 +8,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: frontend
+    name: shop-frontend
   minReplicas: 1          # 시연 때 2로 시작하려면 2로 변경 가능
   maxReplicas: 3
   metrics:

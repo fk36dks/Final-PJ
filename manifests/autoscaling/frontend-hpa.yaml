@@ -2,7 +2,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: frontend-hpa
+  name: shop-frontend-hpa
   namespace: shop
 spec:
   scaleTargetRef:

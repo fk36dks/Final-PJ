@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Kolon - 메인</title>
+
+<style>
+  :root{
+    --bg:#faf9fb; --card:#ffffff; --ink:#1d1b20; --muted:#7c7587;
+    --border:#ece7f6; --pill:#f6f2ff; --tint:#f1eaff; --accent:#6b47d6;
+    --shadow:0 8px 24px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+  .container{max-width:1100px;margin:0 auto;padding:0 18px}
+
+  /* header */
+  header{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--border)}
+  .bar{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .left,.right{display:flex;align-items:center;gap:12px}
+  .brand{font-weight:800;font-size:22px;text-decoration:none;color:inherit}
+  .icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--card);
+            display:grid;place-items:center;cursor:pointer}
+  .pill{border:1px solid var(--border);background:var(--pill);height:30px;padding:0 10px;border-radius:999px;
+        display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;text-decoration:none;color:inherit}
+  .badge{min-width:18px;height:18px;border-radius:999px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;margin-left:6px}
+
+  /* mega dropdown */
+  .mega{position:absolute; top:64px; left:0; width:min(760px, calc(100vw - 24px)); max-height:70vh; overflow:auto;
+        background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); display:none; z-index:50; animation:drop .16s ease;}
+  .mega.show{display:block}
+  @keyframes drop{from{transform:translateY(-6px);opacity:.0}to{transform:none;opacity:1}}
+  .mega-inner{display:grid;grid-template-columns:200px 1fr}
+  .cats{background:var(--pill);border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:8px}
+  .cat-btn{all:unset;display:block;width:100%;cursor:pointer;box-sizing:border-box;padding:10px 12px;border-radius:10px;font-weight:700;color:#2d2a34}
+  .cat-btn:hover{background:#f4f0ff}
+  .cat-btn.active{background:#fff;color:var(--accent);border:1px solid #e6defe}
+  .subs{padding:12px}
+  .subs h3{margin:2px 0 10px;font-size:15px}
+  .subs-list{display:flex;flex-direction:column;gap:10px}
+  .sub-link{all:unset;cursor:pointer;display:block;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:#2b2930;font-size:14px}
+  .sub-link:hover{background:#fbf9ff;border-color:#d9cff7}
+  .sub-link.active{border-color:#d9cff7;background:#fbf9ff}
+  .third{margin-top:10px;display:none}
+  .third h4{margin:0 0 8px 2px;font-size:13px;color:#4b445a}
+  .third-list{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{all:unset;cursor:pointer;display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:13px;color:#2b2930}
+  .chip:hover{background:#f7f4ff;border-color:#d9cff7}
+
+  /* 검색 */
+  .search-wrap{margin:16px 0;display:grid;grid-template-columns:1fr auto;gap:10px}
+  .search{display:flex;align-items:center;background:var(--tint);
+          border-radius:12px;padding:10px 14px;border:1px solid var(--border)}
+  .search input{flex:1;border:0;background:transparent;outline:none}
+  .search-btn{width:44px;height:44px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;display:grid;place-items:center;box-shadow:0 1px 10px rgba(0,0,0,.05)}
+  .search-btn svg{width:22px;height:22px;stroke:#9aa0a6}
+
+  /* 검색 결과(리스트) */
+  .results{margin-top:10px}
+  .res-card{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
+  .res-title{font-weight:700}
+  .res-link{border:1px solid var(--border);background:var(--pill);padding:6px 12px;border-radius:10px;text-decoration:none;color:inherit}
+
+  /* 배너 */
+  .banner{position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 12px rgba(0,0,0,.06);height:78vh;background:#fff}
+  .banner img{width:100%;height:100%;object-fit:cover;object-position:center;transition:opacity .4s;display:block}
+  .banner img.fade{opacity:.15}
+  @media (max-width:700px){ .banner{height:68vh} }
+</style>
+</head>
+<body>
+<header>
+  <div class="container bar" id="topBar">
+    <div class="left">
+      <button class="icon-btn" id="menuBtn" aria-label="카테고리 열기">≡</button>
+      <a class="brand" href="index.html">Kolon</a>
+    </div>
+    <div class="right">
+      <a class="pill">로그아웃</a>
+      <a class="pill" href="cart.html">장바구니 <span class="badge" id="cartCount">0</span></a>
+      <a class="pill" href="mypage.html">마이페이지</a>
+      <a class="pill" href="points.html">포인트</a>
+    </div>
+  </div>
+
+  <!-- 메가 드롭다운 -->
+  <div class="mega" id="mega" aria-hidden="true">
+    <div class="mega-inner">
+      <aside class="cats">
+        <button class="cat-btn active" data-cat="패션">패션</button>
+        <button class="cat-btn" data-cat="식품">식품</button>
+        <button class="cat-btn" data-cat="가전">가전</button>
+      </aside>
+      <section class="subs">
+        <h3 id="megaTitle">패션</h3>
+        <div class="subs-list" id="subsList"></div>
+        <div class="third" id="thirdBox">
+          <h4 id="thirdTitle"></h4>
+          <div class="third-list" id="thirdList"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- 검색 -->
+  <div class="search-wrap">
+    <form class="search" id="searchForm">
+      <input id="q" placeholder="검색어를 입력하세요" />
+    </form>
+    <button class="search-btn" id="searchBtn" title="검색" aria-label="검색">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="results" id="results"></div>
+
+  <!-- 광고 배너 -->
+  <section class="banner">
+    <img id="bannerImg" src="https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K11.png" alt="광고 배너">
+  </section>
+</main>
+
+<script>
+  /* 장바구니 배지 */
+  const CART_KEY='cart';
+  const getCart=()=>{ try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(_){return[]} };
+  document.getElementById('cartCount').textContent = getCart().reduce((s,i)=>s+(i.qty||0),0);
+
+  /* 배너 로테이션 */
+  const imgs=[
+    'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K11.png',
+    'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K12.png',
+    'https://kolon-shop-images.s3.ap-northeast-2.amazonaws.com/K13.png'
+  ];
+  (function rot(){
+    const el=document.getElementById('bannerImg'); let i=0;
+    setInterval(()=>{ i=(i+1)%imgs.length; el.classList.add('fade');
+      setTimeout(()=>{ el.src=imgs[i]; el.classList.remove('fade'); },220);
+    }, 2800);
+  })();
+
+  /* ===== 검색 (빈/없음 → no-results.html, '후드티' → search.html) ===== */
+  const SEARCH_INDEX = [
+    {label:'여성 상의',  url:'women-top.html',    kw:['여성','여성의류','여성 상의','블라우스','티셔츠','후드티','상의']},
+    {label:'여성 하의',  url:'women-bottom.html', kw:['여성','여성 하의','치마','스커트','바지','팬츠','하의']},
+    {label:'남성 상의',  url:'men-top.html',      kw:['남성','남성의류','남성 상의','티셔츠','셔츠','후드','후드티','맨투맨','상의']},
+    {label:'남성 하의',  url:'men-bottom.html',   kw:['남성','남성 하의','바지','청바지','슬랙스','하의']},
+    {label:'과일',       url:'fresh-fruit.html',  kw:['식품','신선식품','과일','fruit','사과','배','포도','바나나']},
+    {label:'채소',       url:'fresh-veg.html',    kw:['식품','신선식품','채소','vegetable','상추','양파','당근']},
+    {label:'과자',       url:'proc-snack.html',   kw:['가공식품','과자','스낵','쿠키','비스킷','snack']},
+    {label:'라면',       url:'proc-ramen.html',   kw:['가공식품','라면','ramen','면','컵라면']},
+    {label:'주방가전',   url:'appl-kitchen.html', kw:['가전','주방가전','믹서기','전자레인지','전기포트','밥솥','키친','kitchen']},
+    {label:'계절가전',   url:'appl-season.html',  kw:['가전','계절가전','선풍기','히터','에어컨','가습기','제습기','season']}
+  ];
+
+  const norm = s => (s||'').toLowerCase().replace(/\s+/g,'').trim();
+  SEARCH_INDEX.forEach(it=>{ it._tokens = [it.label, ...(it.kw||[])].map(norm); });
+
+  const resultsEl = document.getElementById('results');
+
+  function renderResults(items){
+    resultsEl.innerHTML = '';
+    items.forEach(it=>{
+      const card = document.createElement('div');
+      card.className = 'res-card';
+      card.innerHTML = `<div class="res-title">${it.label}</div>
+                        <a class="res-link" href="${it.url}">이동</a>`;
+      resultsEl.appendChild(card);
+    });
+  }
+
+  function goNoResults(raw, reason){
+    const url = `no-results.html?q=${encodeURIComponent(raw)}&r=${encodeURIComponent(reason||'none')}`;
+    location.href = url;
+  }
+
+  function doSearch(){
+    const raw = (document.getElementById('q').value||'').trim();
+    const q = norm(raw);
+
+    // 빈 입력은 아무 동작 X
+    if(!raw){ resultsEl.innerHTML=''; return; }
+
+    // ‘후드티’는 search.html로 이동 (요청된 기존 동작)
+    if(q.includes('후드티')){
+      location.href = `search.html?q=${encodeURIComponent(raw)}`;
+      return;
+    }
+
+    // 한 글자 검색은 결과 없음 페이지로
+    if(q.length < 2){
+      goNoResults(raw,'short');
+      return;
+    }
+
+    const matched = SEARCH_INDEX.filter(it => it._tokens.some(t => t === q || t.includes(q)));
+    if(matched.length===0){
+      goNoResults(raw,'nomatch');
+      return;
+    }
+    renderResults(matched);
+  }
+
+  document.getElementById('searchForm').addEventListener('submit', e=>{ e.preventDefault(); doSearch(); });
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('q').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); doSearch(); }
+  });
+
+  /* ===== 카테고리 ===== */
+  const CAT={
+    '패션':{
+      '여성의류':{children:[{name:'상의',url:'women-top.html'},{name:'하의',url:'women-bottom.html'}]},
+      '남성의류':{children:[{name:'상의',url:'men-top.html'},{name:'하의',url:'men-bottom.html'}]}
+    },
+    '식품':{
+      '신선식품':{children:[{name:'과일',url:'fresh-fruit.html'},{name:'채소',url:'fresh-veg.html'}]},
+      '가공식품':{children:[{name:'과자',url:'proc-snack.html'},{name:'라면',url:'proc-ramen.html'}]}
+    },
+    '가전':{
+      '주방가전':{url:'appl-kitchen.html'},
+      '계절가전':{url:'appl-season.html'}
+    }
+  };
+
+  const mega=document.getElementById('mega');
+  const subsList=document.getElementById('subsList');
+  const megaTitle=document.getElementById('megaTitle');
+  const thirdBox=document.getElementById('thirdBox');
+  const thirdTitle=document.getElementById('thirdTitle');
+  const thirdList=document.getElementById('thirdList');
+
+  function renderSubs(cat){
+    megaTitle.textContent=cat;
+    subsList.innerHTML='';
+    thirdBox.style.display='none';
+    const entries = CAT[cat];
+
+    Object.entries(entries).forEach(([sub, config])=>{
+      const b=document.createElement('button');
+      b.className='sub-link';
+      b.textContent=sub;
+
+      if(config && Array.isArray(config.children)){
+        b.addEventListener('click',()=>{
+          document.querySelectorAll('.sub-link').forEach(x=>x.classList.remove('active'));
+          b.classList.add('active');
+          renderThird(sub, config.children);
+        });
+      }else if(config && config.url){
+        b.addEventListener('click',()=>{ location.href = config.url; });
+      }
+      subsList.appendChild(b);
+    });
+
+    const first = Object.entries(entries).find(([_,v])=>v && Array.isArray(v.children));
+    if(first){
+      const el = [...subsList.children][Object.keys(entries).indexOf(first[0])];
+      el.classList.add('active');
+      renderThird(first[0], entries[first[0]].children);
+    }
+  }
+
+  function renderThird(subTitle, children){
+    thirdTitle.textContent = subTitle;
+    thirdList.innerHTML='';
+    children.forEach(ch=>{
+      const c=document.createElement('button');
+      c.className='chip';
+      c.textContent=ch.name;
+      c.addEventListener('click',()=> location.href = ch.url);
+      thirdList.appendChild(c);
+    });
+    thirdBox.style.display='block';
+  }
+
+  // 초기 렌더: 패션
+  renderSubs('패션');
+
+  function placeMega(){
+    const btn=document.getElementById('menuBtn');
+    const rect=btn.getBoundingClientRect();
+    const left = Math.max(12, rect.left + window.scrollX);
+    mega.style.left = left + 'px';
+  }
+
+  const menuBtn=document.getElementById('menuBtn');
+  menuBtn.addEventListener('click',()=>{
+    placeMega();
+    mega.classList.toggle('show');
+    mega.setAttribute('aria-hidden', mega.classList.contains('show') ? 'false' : 'true');
+  });
+
+  document.querySelectorAll('.cat-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderSubs(b.dataset.cat);
+      placeMega();
+    });
+  });
+
+  document.addEventListener('click',e=>{
+    if(!mega.classList.contains('show')) return;
+    const inside = mega.contains(e.target) || menuBtn.contains(e.target);
+    if(!inside) mega.classList.remove('show');
+  });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') mega.classList.remove('show'); });
+  window.addEventListener('resize',()=>{ if(mega.classList.contains('show')) placeMega(); });
+  window.addEventListener('scroll',()=>{ if(mega.classList.contains('show')) placeMega(); });
+</script>
+</body>
+</html>

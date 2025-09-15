@@ -85,7 +85,6 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <!-- 1) 이전 버튼: 전 페이지 이동 -->
       <button class="back" onclick="history.back()">← 이전</button>
       <h1>주문/결제</h1>
     </div>
@@ -115,7 +114,6 @@
     <section class="card">
       <div class="row">
         <b>배송지</b>
-        <!-- 2) 변경하기: prompt로 정보 수정(직전 동작 복원) -->
         <a href="#" class="muted" onclick="openAddrEdit(event)">변경하기</a>
       </div>
       <div style="margin-top:10px">
@@ -183,16 +181,13 @@
   const fmt = n => (n||0).toLocaleString('ko-KR');
   const getCart = () => { try{return JSON.parse(localStorage.getItem('cart'))||[]}catch(e){return[]} };
 
-  /* ===== 초기 데이터 ===== */
-  let ownPoints = Number(localStorage.getItem('points_balance')) || 35000;   // 보유 포인트(예시)
+  let ownPoints = Number(localStorage.getItem('points_balance')) || 35000;
   const cart = getCart();
 
-  // RDS에서 포인트 조회 함수 추가
   async function updateRDSPoints() {
     try {
       const response = await fetch('/api/demo/points');
       const data = await response.json();
-
       if (response.ok) {
         ownPoints = data.points_balance || 0;
         document.getElementById('ownPt').textContent = fmt(ownPoints);
@@ -205,16 +200,11 @@
     return ownPoints;
   }
 
-  // 페이지 로드 시 RDS 포인트로 업데이트
-  updateRDSPoints().then(() => {
-    updatePay(); // 포인트 업데이트 후 결제 금액 재계산
-  });
+  updateRDSPoints().then(() => { updatePay(); });
 
-  // 합계(장바구니 기반, 없으면 payment_total 사용, 그것도 없으면 0)
   let total = cart.reduce((s,i)=>s + (Number(i.price)||0)*(Number(i.qty)||1), 0);
   if(!total) total = Number(localStorage.getItem('payment_total')) || 0;
 
-  // 주문 패널 채우기 + 이미지 보이도록
   (function fillItem(){
     const imgEl = document.getElementById('firstThumb');
     const nameEl= document.getElementById('firstName');
@@ -222,7 +212,6 @@
     const priceEl=document.getElementById('firstPrice');
     const sumEl  =document.getElementById('firstSum');
     const cntEl  =document.getElementById('itemCnt');
-
     if(cart.length){
       const it = cart[0];
       const qty = Number(it.qty)||1, price = Number(it.price)||0;
@@ -231,7 +220,6 @@
         '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><rect width="100%" height="100%" fill="#efeaff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#6b47d6">상품</text></svg>'
       );
       imgEl.alt = (it.name||'상품') + ' 이미지';
-
       nameEl.textContent = it.name || '상품';
       qtyEl.textContent  = qty;
       priceEl.textContent= fmt(price);
@@ -245,20 +233,12 @@
     }
   })();
 
-  // 합계 영역 표시
   document.getElementById('sumLine').textContent = fmt(total)+'원';
   document.getElementById('payLine').textContent = fmt(total)+'원';
   document.getElementById('payAmtText').textContent = fmt(total);
   document.getElementById('canUse').textContent = fmt(Math.min(total, ownPoints));
   document.getElementById('ownPt').textContent = fmt(ownPoints);
 
-  /* 주문 리스트 접기/펼치기 */
-  document.getElementById('orderFold').addEventListener('click',()=>{
-    const box = document.getElementById('orderList');
-    box.style.display = (box.style.display==='none'?'block':'none');
-  });
-
-  /* ===== 포인트 사용 ===== */
   const pointInput = document.getElementById('pointInput');
   const useAllBtn   = document.getElementById('useAll');
   const ptLine = document.getElementById('ptLine');
@@ -279,14 +259,10 @@
     payAmtText.textContent = fmt(pay);
     document.getElementById('canUse').textContent = fmt(Math.min(total, ownPoints));
   }
-  useAllBtn.addEventListener('click', ()=>{
-    pointInput.value = Math.min(total, ownPoints);
-    updatePay();
-  });
+  useAllBtn.addEventListener('click', ()=>{ pointInput.value = Math.min(total, ownPoints); updatePay(); });
   pointInput.addEventListener('input', updatePay);
   updatePay();
 
-  /* ===== 배송지 변경 ===== */
   function openAddrEdit(e){
     e.preventDefault();
     const name = prompt('수령인 이름을 입력하세요', document.getElementById('recvName').innerText.trim());
@@ -298,7 +274,6 @@
   }
   window.openAddrEdit = openAddrEdit;
 
-  /* ===== 결제 처리(모달) ===== */
   const modal = document.getElementById('doneModal');
   document.getElementById('payBtn').addEventListener('click', ()=>{
     const btn = document.getElementById('payBtn');
@@ -307,7 +282,6 @@
     btn.disabled = true;
 
     setTimeout(async ()=>{
-      // RDS에서 포인트 차감 처리
       const used = clampPoint(pointInput.value);
 
       if (used > 0) {
@@ -317,26 +291,16 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: used })
           });
-
-          if (response.ok) {
-            console.log(`포인트 ${used}원 차감 완료`);
-          } else {
-            console.error('포인트 차감 실패');
-          }
+          if (response.ok) console.log(`포인트 ${used}원 차감 완료`);
         } catch (error) {
           console.error('포인트 차감 API 오류:', error);
-          const remain = Math.max(0, (Number(localStorage.getItem('points_balance'))||ownPoints) - used);
-          localStorage.setItem('points_balance', remain.toString());
         }
       }
 
-      // 임시 주문 생성
       const orders = JSON.parse(localStorage.getItem('orders')||'[]');
       const orderId = 'OD' + Date.now();
       const items = cart.length ? cart.map(i=>({
-        name: i.name,
-        qty: Number(i.qty)||1,
-        price: Number(i.price)||0,
+        name: i.name, qty: Number(i.qty)||1, price: Number(i.price)||0,
         image: i.image||i.img||i.thumbnail||i.thumb||''
       })) : [{
         name: document.getElementById('firstName').textContent || '상품',
@@ -352,27 +316,20 @@
       };
 
       const tempOrder = {
-        id: orderId,
-        date: new Date().toISOString(),
-        items: items,
+        id: orderId, date: new Date().toISOString(), items: items,
         subtotal: items.reduce((s,x)=>s+x.price*x.qty,0),
-        pointsUsed: used,
-        total: Math.max(0, total - used),
-        status: '결제완료',
-        receiver: receiver,
-        isTemp: true,
+        pointsUsed: used, total: Math.max(0, total - used),
+        status: '결제완료', receiver: receiver, isTemp: true,
         expireAt: Date.now() + 30000
       };
 
       orders.unshift(tempOrder);
       localStorage.setItem('orders', JSON.stringify(orders));
 
-      // ✅ AWS SES Webhook 호출 추가
+      // ✅ AWS SES Webhook 호출
       const pay = Math.max(0, total - used);
       sendOrderEvent({
-        orderId,
-        user: { name: "사용자", email: "hanjungyi204@gmail.com" },
-        total: pay
+        orderId, user: { name: "사용자", email: "hanjungyi204@gmail.com" }, total: pay
       });
 
       setTimeout(() => {
@@ -382,31 +339,35 @@
       }, 30000);
 
       localStorage.removeItem('cart');
-      btn.disabled = false;
-      btn.innerHTML = old;
+      btn.disabled = false; btn.innerHTML = old;
       modal.classList.add('show');
     }, 900);
   });
 
-  // ✅ AWS SES Webhook 호출 함수
+  // ✅ 주문 이벤트 전송 함수
   async function sendOrderEvent(order){
     try{
-      await fetch("https://hvz6djdxbzd7teokpmv3j7g7740zsocw.lambda-url.ap-northeast-2.on.aws/", {
+      const resp = await fetch("https://hvz6djdxbzd7teokpmv3j7g7740zsocw.lambda-url.ap-northeast-2.on.aws/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Webhook-Token": "d45e929e9e142bdc7c7c9c9f566aae0cfc4a2a02d00b77d3e01776784e7462ba"
+          "X-Webhook-Token": "d45e929e9e142bdc7c7c9f566aae0cfc4a2a02d00b77d3e01776784e7462ba"
         },
         body: JSON.stringify(order)
       });
-      console.log("주문 이벤트 전송 성공:", order);
+      const data = await resp.json().catch(()=>({}));
+      if (!resp.ok) {
+        console.error("❌ 주문 이벤트 전송 실패:", resp.status, data);
+      } else {
+        console.log("✅ 주문 이벤트 전송 성공:", data);
+      }
     }catch(e){
-      console.error("주문 이벤트 전송 실패:", e);
+      console.error("❌ 주문 이벤트 전송 오류:", e);
     }
   }
 
-  // 모달 외부 클릭 닫기
   modal.addEventListener('click',(e)=>{ if(e.target===modal){ modal.classList.remove('show'); }});
 </script>
 </body>
 </html>
+

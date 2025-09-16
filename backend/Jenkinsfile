@@ -11,6 +11,10 @@ pipeline {
     // ✅ Docker Hub 추가
     DOCKERHUB_REPO           = 'fk36dks/shop-backend'      // <user>/<repo>
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-https'           // Jenkins에 만든 그 ID
+
+    // ✅ Slack 알림용
+    SLACK_CHANNEL      = '#ci-cd'
+    SLACK_CREDENTIALS  = 'slack-token'
   }
 
   stages {
@@ -131,6 +135,16 @@ pipeline {
         docker logout ${ECR_REPO%/*} || true
       '''
       cleanWs()
+    }
+    success {
+      slackSend(channel: "${SLACK_CHANNEL}",
+                message: "✅ Backend Build Success: ${JOB_NAME} #${BUILD_NUMBER}",
+                tokenCredentialId: "${SLACK_CREDENTIALS}")
+    }
+    failure {
+      slackSend(channel: "${SLACK_CHANNEL}",
+                message: "❌ Backend Build Failed: ${JOB_NAME} #${BUILD_NUMBER}",
+                tokenCredentialId: "${SLACK_CREDENTIALS}")
     }
   }
 }

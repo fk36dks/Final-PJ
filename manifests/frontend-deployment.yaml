@@ -15,7 +15,7 @@ spec:
       maxSurge: 1         # 새 파드 1개씩 추가
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
-  minReadySeconds: 5        # 새 파드가 Ready로 안정화된 뒤 사용
+  minReadySeconds: 5        
   selector:
     matchLabels:
       app: shop-frontend
@@ -27,7 +27,7 @@ spec:
       containers:
         - name: shop-frontend
           image: 335507813633.dkr.ecr.ap-northeast-2.amazonaws.com/shop-frontend:78
-          imagePullPolicy: Always          # 같은 태그라도 새 이미지 당겨오기
+          imagePullPolicy: Always          
           ports:
             - containerPort: 80
           resources:
